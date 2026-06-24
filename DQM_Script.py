@@ -8,7 +8,35 @@ import matplotlib.patches as patches
 from numba import njit
 import time
 
-#Put all changable variables here with their options like all paths and stuff
+#all options and changes listed here:
+r0_file_location='/data/user/fbivens5020/mock_data/'#'folder where all the r0 files are'
+pedestal_path='/data/wipac/CTA/targetcdata/run400032_pedestal.tcal'#'the chosen pedestal'
+new_r1_file_location='/data/user/fbivens5020/mock_data/'#folder where live monitoring r1 files go'
+old_r1_file_location='folder where existing r1 files are stored, not currently relevant'
+physical_metrics_location='/data/user/fbivens5020/mock_data/'#"folder where temps currents etc are stored, assuming they're all together"
+modules="some specific number"
+
+live_monitoring='true or false'
+archival_data='true or false'
+
+histograms='true or false'
+noise_shower_regions='true or false'
+flasher_regions='true or false'
+boxes='true or false'
+
+histogram_location_charge='path to save total charge std vs mean charge histograms'
+histogram_location_time='path to save total time std vs mean charge histograms'
+regions_location_charge='path to save noise/shower region charge std vs mean charge histograms'
+regions_location_time='path to save noise/shower region time std vs mean charge histogram'
+flasher_location_charge='path to save flasher region charge std vs mean charge histogram'
+flasher_location_time='path to save flasher region time std vs mean charge histogram'
+
+extra_lines='true or false'
+resolution='some number'
+run_base='some more specific number'
+summary_plots_location_1="/home/fbivens5020/imgB.jpg"#'path where event rate histogram goes'
+summary_plots_location_2="/home/fbivens5020/imgA.jpg" #path where the physical metrics go
+
 
 #get the reader object with your r0_file_path, chosen pedestal path, and r1_file_path if one exists
 
@@ -302,7 +330,7 @@ def sort_data(sr_data, cuts, list=False):
     
 #sorts the data into 9 lists, should be used to create the sorted_data object which has 9 sections with 2 indexes each
 
-def event_rate(sorted_data, sr_data, run_id, sr_number, mod=1, test=False):
+def event_rate(sorted_data, sr_data, run_id, sr_number, save_location, mod=1, test=False):
     modifier=mod
     # fig=plt.figure()
     # ax=fig.add_subplot(111)
@@ -310,7 +338,7 @@ def event_rate(sorted_data, sr_data, run_id, sr_number, mod=1, test=False):
     ax.hist(sr_data[5], weights = [modifier for _ in range(len(sr_data[5]))], bins = np.arange(sr_data[5][0], sr_data[5][-1], 1E9/modifier), log=True, histtype = 'step', label = 'All') 
     ax.hist(sorted_data[0][1], weights = [modifier for _ in range(len(sorted_data[0][1]))], bins = np.arange(sorted_data[0][1][0], sorted_data[0][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'Showers') 
     ax.hist(sorted_data[1][1], weights = [modifier for _ in range(len(sorted_data[1][1]))], bins = np.arange(sorted_data[1][1][0], sorted_data[1][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'Flashers') 
-    ax.hist(sorted_data[2][1], weights = [modifier for _ in range(len(sorted_data[2][1]))], bins = np.arange(sorted_data[2][1][0], sorted_data[2][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'NSB') 
+    ax.hist(sorted_data[2][1], weights = [modifier for _ in range(len(sorted_data[2][1]))], bins = np.arange(sorted_data[2][1][0], sorted_data[2][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'Other') 
     
     if test==True:
        ax.hist(sorted_data[3][1], weights = [modifier for _ in range(len(sorted_data[3][1]))], bins = np.arange(sorted_data[3][1][0], sorted_data[3][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'charge showers') 
@@ -320,23 +348,24 @@ def event_rate(sorted_data, sr_data, run_id, sr_number, mod=1, test=False):
     ax.set_title(f"Event Rates Run {run_id}, sr{sr_number}")
     ax.set_xlabel("Time [ns]")
     ax.set_ylabel("Rate [Hz]")
-    fig.savefig("/home/fbivens5020/imgB.jpg")
+    fig.savefig(save_location)
     print("summary plot B has actually been generated")
     plt.show()
 
 #makes histogram of rates with or without some test lines that help with refining box cuts  
-def event_rate_summary(run_id, sr_number , test=False, resolution=1):
+def event_rate_summary(run_id, sr_number, r0_location, tcal_location, r1_location, save_location, test=False, resolution=1):
 
     sr_id=sr_number
-    r0_file='/data/user/fbivens5020/mock_data/run'+str(run_id)+'_subrun'+str(sr_id)+'_r0.tio'
+    r0_file=r0_location+'run'+str(run_id)+'_subrun'+str(sr_id)+'_r0.tio'
 
-    tcal_file='/data/wipac/CTA/targetcdata/run400032_pedestal.tcal'
+    tcal_file=tcal_location
 
-    r1_file='/data/user/fbivens5020/mock_data/run'+str(run_id)+'_subrun'+str(sr_id)+'.r1'
+    r1_file=r1_location+'run'+str(run_id)+'_subrun'+str(sr_id)+'.r1'
 
     reader=get_reader(r0_file, tcal_file, r1_file)
 
-    sr_data= collect_stats(reader)
+    sr_data=collect_stats(reader) 
+
 
     cuts=get_cuts()
     
@@ -344,13 +373,13 @@ def event_rate_summary(run_id, sr_number , test=False, resolution=1):
 
     sorted_data=sort_data(sr_data, cuts, list=test)
 
-    event_rate(sorted_data, sr_data, run_id, sr_number, test=test, mod=resolution)
+    event_rate(sorted_data, sr_data, run_id, sr_number, save_location, test=test, mod=resolution)
 
     #Produces the whole nice graph thing
 
 #OTHER METRICS FUNCTION
 
-def physical_summary(run_id, sr_number, modules=22):
+def physical_summary(run_id, sr_number, metrics_location, save_location, modules=22):
     run=run_id
     subruns=sr_number+1
     
@@ -361,16 +390,16 @@ def physical_summary(run_id, sr_number, modules=22):
 
     for sr in range(subruns):
 
-      fpmTemp_data=np.load(f'/data/user/fbivens5020/mock_data/temperatures_FPMs_run{run}_subrun{sr}.npy')
+      fpmTemp_data=np.load(f'{metrics_location}temperatures_FPMs_run{run}_subrun{sr}.npy')
       fpmTemp_list.append(fpmTemp_data)
 
-      feeTemp_data=np.load(f'/data/user/fbivens5020/mock_data/temperatures_FEEs_run{run}_subrun{sr}.npy')
+      feeTemp_data=np.load(f'{metrics_location}temperatures_FEEs_run{run}_subrun{sr}.npy')
       feeTemp_list.append(feeTemp_data)
 
-      hv_data=np.load(f'/data/user/fbivens5020/mock_data/HV_FPMs_run{run}_subrun{sr}.npy')
+      hv_data=np.load(f'{metrics_location}HV_FPMs_run{run}_subrun{sr}.npy')
       hv_list.append(hv_data)
 
-      current_data=np.load(f'/data/user/fbivens5020/mock_data/Current_FEEs_run{run}_subrun{sr}.npy')
+      current_data=np.load(f'{metrics_location}Current_FEEs_run{run}_subrun{sr}.npy')
       current_list.append(current_data)
 
     fpmTemps=np.zeros((modules*4,3,len(fpmTemp_list[:])))
@@ -411,23 +440,23 @@ def physical_summary(run_id, sr_number, modules=22):
     for mod in range(modules):
        ax3.plot(hv[mod][0],hv[mod][1])
        ax4.plot(current[mod][0],current[mod][1])
-    ax3.set_ylabel("HV (V(?))")
-    ax4.set_ylabel("Current (A(?))")
+    ax3.set_ylabel("HV (V)")
+    ax4.set_ylabel("Current (A)")
     ax4.set_xlabel("Subrun ID")
     fig.tight_layout()
     ax1.set_title(f"Run {run_id} sr 0-{sr_number} physical metrics")
-    fig.savefig("/home/fbivens5020/imgA.jpg")
+    fig.savefig(save_location)
     print("summary plot A has actually been generated")
     plt.show()
     
 #CONDENSED FUNCTION 
 
-def sr_summary(run_id, sr_number, test=False, resolution=1, modules=22):
+def sr_summary(run_id, sr_number, metrics_location, r0_location, tcal_location, r1_location, ev_save_location, phys_save_location, test=False, resolution=1, modules=22):
 
-    event_rate_summary(run_id, sr_number, test=test, resolution=resolution)
+    event_rate_summary(run_id, sr_number, r0_location, tcal_location, r1_location, ev_save_location, test=False, resolution=resolution)
     print("Summary plot B has been generated")
 
-    physical_summary(run_id, sr_number, modules=modules)
+    physical_summary(run_id, sr_number, metrics_location, phys_save_location, modules=modules)
     print("Summary plot A has been generated")
 
     print(f"Run {run_id} sr{sr_number} summary")
@@ -438,19 +467,18 @@ def get_new_sr(run_base=400195, subrun_base=0):
 
    run=None
    while run==None:
-      if os.path.exists(f"/data/user/fbivens5020/mock_data/Current_FEEs_run{run_base+1}_subrun0.npy")==True:
+      if os.path.exists(f"{physical_metrics_location}Current_FEEs_run{run_base+1}_subrun0.npy")==True:
          run_base=run_base+1
       else:
          run=run_base
 
    subrun=None
    while subrun==None:
-      if os.path.exists(f"/data/user/fbivens5020/mock_data/Current_FEEs_run{run}_subrun{subrun_base+1}.npy")==True:
+      if os.path.exists(f"{physical_metrics_location}Current_FEEs_run{run}_subrun{subrun_base+1}.npy")==True:
          subrun_base=subrun_base+1
       else:
          subrun=subrun_base
    return run, subrun
-
 
 active=True
 last_sr=15
@@ -459,9 +487,9 @@ while active==True: #This is the important cell that manages everything
     current_sr=get_new_sr()
     print(f"Latest Subrun: Run {current_sr[0]} sr{current_sr[1]}")
 
-    if os.path.exists(f"/data/user/fbivens5020/mock_data/Current_FEEs_run{current_sr[0]}_subrun{current_sr[1]}.npy")==True:
+    if os.path.exists(f"{physical_metrics_location}Current_FEEs_run{current_sr[0]}_subrun{current_sr[1]}.npy")==True:
        tim_n = time.time()
-       sr_summary(current_sr[0],current_sr[1])
+       sr_summary(current_sr[0], current_sr[1], physical_metrics_location, r0_file_location, pedestal_path, new_r1_file_location, summary_plots_location_1, summary_plots_location_2)
        print(f'Summary for Subrun {current_sr[1]} took {time.time()-tim_n}s')
     else:
         print("This file doesn't exist yet")
