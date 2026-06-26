@@ -4,7 +4,7 @@ import time
 
 outfolder_r0 = '/data/user/fbivens5020/mock_data/' #THIS SHOULD BE ONLY A FOLDER UNDER YOUR USER
 outfolder_npys = outfolder_r0 #THIS SHOULD BE ONLY A FOLDER UNDER YOUR USER
-time_per_subrun = 20 # IN SECONDS
+time_per_subrun = 50 # IN SECONDS
 run = 400196
 end_subrun = 15
 
