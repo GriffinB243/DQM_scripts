@@ -12,17 +12,16 @@ import time
 r0_file_location='/data/user/fbivens5020/mock_data/'#'folder where all the r0 files are'
 pedestal_path='/data/wipac/CTA/targetcdata/run400032_pedestal.tcal'#'the chosen pedestal'
 new_r1_file_location='/data/user/fbivens5020/mock_data/'#folder where live monitoring r1 files go'
-old_r1_file_location='folder where existing r1 files are stored, not currently relevant'
+old_r1_file_location=None #theoretically if you want it to use existing r1 files, option is currently broken
 physical_metrics_location='/data/user/fbivens5020/mock_data/'#"folder where temps currents etc are stored, assuming they're all together"
 modules=22 #the number of operable modules on the camera
 type_number=10 #relates to how how sorting works, don't touch this
 
-live_monitoring= True #'true or false, run the while loop that live monitors
-run_base=400195 #the first run that will be checked for when finding the newest run. should be fine if its ahead of where you actually are
-last_subrun=[400196, 15] #if you know your end point this will stop the while loops after that, this does have to be a list
-archival_data=False #'true or false, run a loop for a given set of older data, don't have on at the same time as live_monitoring
-initial_subrun=[400196,0] #first subrun to start looking at in older data
-final_subrun=[400196,15] #last subrun to look at in older data. should be able to go across runs as well
+monitoring=True #run the loop
+live=True #is data being taken live, if true will detect the most recent run and start looking at the next run after that
+run_base=400214 #base for function that finds most recent run. only needs to be specific if there aren't any earlier runs in the file
+initial_subrun=[400215,0] #first run and subrun to look at for existing data
+final_subrun=[400215,5] #last subrun, can be used as a stopping point for live monitoring and looking at existing data
 
 histograms_1d=True #true/false, will 1d histograms be generated at all
 histograms_2d=True #true/false, will 2d histograms be generated at all
@@ -30,15 +29,15 @@ subrun_plots=True #true/false decides if plots will be generated and saved for a
 boxes=True #true/false, will the cut boxes be visible on the histograms
 noise_shower_regions=True #true/false, plots for the noise/shower region will be generated
 flasher_regions=True #true/false, plots for flasher regions will be generated
-tight_windows=True #true/false if false the region graphs look at the whole sorting box, if true they look at a tighter region for more detail between showers and flashers
+tight_windows=False #true/false if false the region graphs look at the whole sorting box, if true they look at a tighter region for more detail between showers and flashers
 
-extra_lines=True #true/false the lines for showers according to charge std and time std separately will be shown
+extra_lines=False #true/false the lines for showers according to charge std and time std separately will be shown
 resolution=1 #modifier on histogram bin sizes, 1 is a bin per second, 5 is a bin per fifth of a second, etc. it's set up to leave rate invariant
 time_step=60E9 #modifier for the time scale, 60 billion is to take ns to min
 
 subrun_plots=True #true/false decides if versions of
-display_plots_path="/data/user/fbivens5020/DQM_Plots/DQM_display_plots/"# path to folder of display files, these are the ones being overwritten through the loop
-plots_save_path= "/data/user/fbivens5020/DQM_Plots/" #place to save all generated plot files for each run and subrun
+display_plots_path="/data/user/fbivens5020/DQM_scripts/DQM_plots/display_plots/"# path to folder of display files, these are the ones being overwritten through the loop
+plots_save_path= "/data/user/fbivens5020/DQM_scripts/DQM_plots/subrun_plots/" #place to save all generated plot files for each run and subrun
 
 
 #get the reader object with your r0_file_path, chosen pedestal path, and r1_file_path if one exists
@@ -137,8 +136,8 @@ def collect_stats(reader): #being actively used
 #sr[3]: charge mean, sr[4]: charge std, sr[5]: event time
 
 def get_cuts(): #being actively used
-    charge_mean_shower_max=1250
-    charge_mean_shower_min=25
+    charge_mean_shower_max=2000
+    charge_mean_shower_min=40
 
     charge_std_shower_max=2000
     charge_std_shower_min=40
@@ -149,7 +148,7 @@ def get_cuts(): #being actively used
     charge_std_flasher_max=1750
     charge_std_flasher_min=800
 
-    time_std_shower_max=21.5
+    time_std_shower_max=21
     time_std_shower_min=14
 
     time_std_flasher_max=18
@@ -158,8 +157,8 @@ def get_cuts(): #being actively used
     return charge_mean_shower_min, charge_mean_shower_max, charge_std_shower_min, charge_std_shower_max, charge_mean_flasher_min, charge_mean_flasher_max, charge_std_flasher_min, charge_std_flasher_max, time_std_shower_min, time_std_shower_max, time_std_flasher_min, time_std_flasher_max
 
 #establishes ranges for sorting boxes, make sure to have cuts=get_cuts
-
-def sort_data(sr_data, cuts, list=False): #being actively used
+#sorting function, to be phased out but still works
+def sort_data(sr_data, cuts, list=False): #Out
     ch_showers=[]
     t_showers=[]
     ch_flashers=[]
@@ -177,14 +176,14 @@ def sort_data(sr_data, cuts, list=False): #being actively used
 
         if sr_data[3][ev]>cuts[0] and sr_data[3][ev]<cuts[1] and sr_data[4][ev]>cuts[2] and sr_data[4][ev]<cuts[3]:
           ch_showers.append(ev)
-        elif sr_data[3][ev]>cuts[4] and sr_data[3][ev]<cuts[5] and sr_data[4][ev]>cuts[6] and sr_data[4][ev]<cuts[7]:
+        elif sr_data[3][ev]>cuts[4] and sr_data[3][ev]<cuts[5]:# and sr_data[4][ev]>cuts[6] and sr_data[4][ev]<cuts[7]:
             ch_flashers.append(ev)
         else:
             ch_noise.append(ev)
 
         if sr_data[3][ev]>cuts[0] and sr_data[3][ev]<cuts[1] and sr_data[2][ev]>cuts[8] and sr_data[2][ev]<cuts[9]:
             t_showers.append(ev)
-        elif sr_data[3][ev]>cuts[4] and sr_data[3][ev]<cuts[5] and sr_data[2][ev]>cuts[10] and sr_data[2][ev]<cuts[11]:
+        elif sr_data[3][ev]>cuts[4] and sr_data[3][ev]<cuts[5]:# and sr_data[2][ev]>cuts[10] and sr_data[2][ev]<cuts[11]:
             t_flashers.append(ev)
         else: 
             t_noise.append(ev)
@@ -255,20 +254,238 @@ def sort_data(sr_data, cuts, list=False): #being actively used
     return all_events_data, conf_showers, conf_flashers, conf_noise, charge_showers, time_showers, charge_flashers, time_flashers, charge_noise, time_noise
     
 #sorts the data into 9 lists, should be used to create the sorted_data object which has 9 sections with 2 indexes each
+def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and being used
+   confirmations=[[],[],[],[],0]
+   sorted_subrun=[[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]]]
+   for ev in range(len(sr_data[0])):
+        #all events data
+        sorted_run_data[0][0].append(sr_data[5][ev]) #event time
+        sorted_run_data[0][1].append(sr_data[3][ev]) #mean charge
+        sorted_run_data[0][2].append(sr_data[4][ev]) #charge std
+        sorted_run_data[0][3].append(sr_data[1][ev]) #mean time
+        sorted_run_data[0][4].append(sr_data[2][ev]) #time std
+        sorted_run_data[0][5].append(ev)#event id inside subrun
+        sorted_run_data[0][6].append(subrun)# subrun id to make event id usable
+        #again but for the subrun only
+        sorted_subrun[0][0].append(sr_data[5][ev]) #event time
+        sorted_subrun[0][1].append(sr_data[3][ev]) #mean charge
+        sorted_subrun[0][2].append(sr_data[4][ev]) #charge std
+        sorted_subrun[0][3].append(sr_data[1][ev]) #mean time
+        sorted_subrun[0][4].append(sr_data[2][ev]) #time std
+        sorted_subrun[0][5].append(ev)#event id inside subrun
+        sorted_subrun[0][6].append(subrun)# subrun id to make event id usable
+
+        if ev==0:
+            sorted_run_data[0][7].append(0)
+            sorted_subrun[0][7].append(0)
+            subruns.append([subrun, sr_data[5][ev]]) #if first event delta t =0, also record the subrun start time
+        else:
+            sorted_run_data[0][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
+            sorted_subrun[0][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+
+        if sr_data[3][ev]>cuts[1] and sr_data[3][ev]<cuts[0] and sr_data[4][ev]>cuts[3] and sr_data[4][ev]<cuts[2]:
+            #charge showers
+            confirmations[0].append(ev)
+            sorted_run_data[4][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[4][1].append(sr_data[3][ev]) #mean charge
+            sorted_run_data[4][2].append(sr_data[4][ev]) #charge std
+            sorted_run_data[4][3].append(sr_data[1][ev]) #mean time
+            sorted_run_data[4][4].append(sr_data[2][ev]) #time std
+            sorted_run_data[4][5].append(ev)#event id inside subrun
+            sorted_run_data[4][6].append(subrun)# subrun id to make event id usable
+            #again but for the subrun only
+            sorted_subrun[4][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[4][1].append(sr_data[3][ev]) #mean charge
+            sorted_subrun[4][2].append(sr_data[4][ev]) #charge std
+            sorted_subrun[4][3].append(sr_data[1][ev]) #mean time
+            sorted_subrun[4][4].append(sr_data[2][ev]) #time std
+            sorted_subrun[4][5].append(ev)#event id inside subrun
+            sorted_subrun[4][6].append(subrun)# subrun id to make event id usable
+            
+            if ev==0:
+                sorted_run_data[4][7].append(0)
+                sorted_subrun[4][7].append(0)
+                 #if first event delta t=0
+            else:
+                sorted_run_data[4][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
+                sorted_subrun[4][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+          
+        elif sr_data[3][ev]>cuts[4] and sr_data[3][ev]<cuts[5]:
+            #actually just flashers now
+            sorted_run_data[2][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[2][1].append(sr_data[3][ev]) #mean charge
+            sorted_run_data[2][2].append(sr_data[4][ev]) #charge std
+            sorted_run_data[2][3].append(sr_data[1][ev]) #mean time
+            sorted_run_data[2][4].append(sr_data[2][ev]) #time std
+            sorted_run_data[2][5].append(ev)#event id inside subrun
+            sorted_run_data[2][6].append(subrun)# subrun id to make event id usable
+
+            #again but for the subrun only
+            sorted_subrun[2][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[2][1].append(sr_data[3][ev]) #mean charge
+            sorted_subrun[2][2].append(sr_data[4][ev]) #charge std
+            sorted_subrun[2][3].append(sr_data[1][ev]) #mean time
+            sorted_subrun[2][4].append(sr_data[2][ev]) #time std
+            sorted_subrun[2][5].append(ev)#event id inside subrun
+            sorted_subrun[2][6].append(subrun)# subrun id to make event id usable
+            if ev==0:
+                sorted_run_data[2][7].append(0)
+                sorted_subrun[2][7].append(0)
+                 #if first event delta t=0
+            else:
+                sorted_run_data[2][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
+                sorted_subrun[2][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+        else:
+            #charge noise i guess we're still doing this
+            confirmations[1].append(ev)
+            sorted_run_data[6][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[6][1].append(sr_data[3][ev]) #mean charge
+            sorted_run_data[6][2].append(sr_data[4][ev]) #charge std
+            sorted_run_data[6][3].append(sr_data[1][ev]) #mean time
+            sorted_run_data[6][4].append(sr_data[2][ev]) #time std
+            sorted_run_data[6][5].append(ev)#event id inside subrun
+            sorted_run_data[6][6].append(subrun)# subrun id to make event id usable
+
+            #again but for the subrun only
+            sorted_subrun[6][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[6][1].append(sr_data[3][ev]) #mean charge
+            sorted_subrun[6][2].append(sr_data[4][ev]) #charge std
+            sorted_subrun[6][3].append(sr_data[1][ev]) #mean time
+            sorted_subrun[6][4].append(sr_data[2][ev]) #time std
+            sorted_subrun[6][5].append(ev)#event id inside subrun
+            sorted_subrun[6][6].append(subrun)# subrun id to make event id usable
+            if ev==0:
+                sorted_run_data[6][7].append(0)
+                sorted_subrun[6][7].append(0)
+                 #if first event delta t=0
+            else:
+                sorted_run_data[6][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
+                sorted_subrun[6][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+
+        if sr_data[3][ev]>cuts[0] and sr_data[3][ev]<cuts[1] and sr_data[2][ev]>cuts[8] and sr_data[2][ev]<cuts[9]:
+            #time showers
+            confirmations[2].append(ev)
+            sorted_run_data[5][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[5][1].append(sr_data[3][ev]) #mean charge
+            sorted_run_data[5][2].append(sr_data[4][ev]) #charge std
+            sorted_run_data[5][3].append(sr_data[1][ev]) #mean time
+            sorted_run_data[5][4].append(sr_data[2][ev]) #time std
+            sorted_run_data[5][5].append(ev)#event id inside subrun
+            sorted_run_data[5][6].append(subrun)# subrun id to make event id usable
+
+            #again but for the subrun only
+            sorted_subrun[5][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[5][1].append(sr_data[3][ev]) #mean charge
+            sorted_subrun[5][2].append(sr_data[4][ev]) #charge std
+            sorted_subrun[5][3].append(sr_data[1][ev]) #mean time
+            sorted_subrun[5][4].append(sr_data[2][ev]) #time std
+            sorted_subrun[5][5].append(ev)#event id inside subrun
+            sorted_subrun[5][6].append(subrun)# subrun id to make event id usable
+            if ev==0:
+                sorted_run_data[5][7].append(0)
+                sorted_subrun[5][7].append(0)
+                 #if first event delta t=0
+            else:
+                sorted_run_data[5][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
+                sorted_subrun[5][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+
+        elif sr_data[3][ev]>cuts[4] and sr_data[3][ev]<cuts[5]:
+            #don't gotta do anything :)
+            confirmations[4]+=1
+        else: 
+            #time noise
+            confirmations[3].append(ev)
+            sorted_run_data[7][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[7][1].append(sr_data[3][ev]) #mean charge
+            sorted_run_data[7][2].append(sr_data[4][ev]) #charge std
+            sorted_run_data[7][3].append(sr_data[1][ev]) #mean time
+            sorted_run_data[7][4].append(sr_data[2][ev]) #time std
+            sorted_run_data[7][5].append(ev)#event id inside subrun
+            sorted_run_data[7][6].append(subrun)# subrun id to make event id usable
+
+            #again but for the subrun only
+            sorted_subrun[7][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[7][1].append(sr_data[3][ev]) #mean charge
+            sorted_subrun[7][2].append(sr_data[4][ev]) #charge std
+            sorted_subrun[7][3].append(sr_data[1][ev]) #mean time
+            sorted_subrun[7][4].append(sr_data[2][ev]) #time std
+            sorted_subrun[7][5].append(ev)#event id inside subrun
+            sorted_subrun[7][6].append(subrun)# subrun id to make event id usable
+            if ev==0:
+                sorted_run_data[7][7].append(0)
+                sorted_subrun[7][7].append(0)
+                #if first event delta t=0
+            else:
+                sorted_run_data[7][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
+                sorted_subrun[7][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+
+        if sr_data[3][ev]>cuts[0] and sr_data[3][ev]<cuts[1] and sr_data[4][ev]>cuts[2] and sr_data[4][ev]<cuts[3]and sr_data[2][ev]>cuts[8] and sr_data[2][ev]<cuts[9]:
+            #confirmed showers
+            sorted_run_data[1][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[1][1].append(sr_data[3][ev]) #mean charge
+            sorted_run_data[1][2].append(sr_data[4][ev]) #charge std
+            sorted_run_data[1][3].append(sr_data[1][ev]) #mean time
+            sorted_run_data[1][4].append(sr_data[2][ev]) #time std
+            sorted_run_data[1][5].append(ev)#event id inside subrun
+            sorted_run_data[1][6].append(subrun)# subrun id to make event id usable
+
+            #again but for the subrun only
+            sorted_subrun[1][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[1][1].append(sr_data[3][ev]) #mean charge
+            sorted_subrun[1][2].append(sr_data[4][ev]) #charge std
+            sorted_subrun[1][3].append(sr_data[1][ev]) #mean time
+            sorted_subrun[1][4].append(sr_data[2][ev]) #time std
+            sorted_subrun[1][5].append(ev)#event id inside subrun
+            sorted_subrun[1][6].append(subrun)# subrun id to make event id usable
+            if ev==0:
+                sorted_run_data[1][7].append(0)
+                sorted_subrun[1][7].append(0)
+                #if first event delta t=0
+            else:
+                sorted_run_data[1][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
+                sorted_subrun[1][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+        
+        if ev in confirmations[1] and confirmations[3]:
+            #confirmed noise
+            sorted_run_data[3][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[3][1].append(sr_data[3][ev]) #mean charge
+            sorted_run_data[3][2].append(sr_data[4][ev]) #charge std
+            sorted_run_data[3][3].append(sr_data[1][ev]) #mean time
+            sorted_run_data[3][4].append(sr_data[2][ev]) #time std
+            sorted_run_data[3][5].append(ev)#event id inside subrun
+            sorted_run_data[3][6].append(subrun)# subrun id to make event id usable
+
+            #again but for the subrun only
+            sorted_subrun[3][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[3][1].append(sr_data[3][ev]) #mean charge
+            sorted_subrun[3][2].append(sr_data[4][ev]) #charge std
+            sorted_subrun[3][3].append(sr_data[1][ev]) #mean time
+            sorted_subrun[3][4].append(sr_data[2][ev]) #time std
+            sorted_subrun[3][5].append(ev)#event id inside subrun
+            sorted_subrun[3][6].append(subrun)# subrun id to make event id usable
+            if ev==0:
+                sorted_run_data[3][7].append(0)
+                sorted_subrun[3][7].append(0)
+                #if first event delta t=0
+            else:
+                sorted_run_data[3][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
+                sorted_subrun[3][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+
+   return sorted_run_data, sorted_subrun
 
 #event rate histograms, being actively used
 def event_rate_hists(current_sr, sorted_run_data, sorted_subrun, resolution, time_step, display_plots_path, plots_save_path, extra_lines=False, subrun_plots=False):
     modifier=resolution
     fig, ax = plt.subplots()
 
-    ax.hist(sorted_run_data[0][1]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[0][1]))], bins = np.arange(sorted_run_data[0][1][0]/(time_step), sorted_run_data[0][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'All') 
-    ax.hist(sorted_run_data[1][1]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[1][1]))], bins = np.arange(sorted_run_data[1][1][0]/(time_step), sorted_run_data[1][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Showers') 
-    ax.hist(sorted_run_data[2][1]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[2][1]))], bins = np.arange(sorted_run_data[2][1][0]/(time_step), sorted_run_data[2][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Flashers') 
-    ax.hist(sorted_run_data[3][1]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[3][1]))], bins = np.arange(sorted_run_data[3][1][0]/(time_step), sorted_run_data[3][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Other') 
+    ax.hist(sorted_run_data[0][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[0][0]))], bins = np.arange(sorted_run_data[0][0][0]/(time_step), sorted_run_data[0][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'All') 
+    ax.hist(sorted_run_data[1][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[1][0]))], bins = np.arange(sorted_run_data[1][0][0]/(time_step), sorted_run_data[1][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Showers') 
+    ax.hist(sorted_run_data[2][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[2][0]))], bins = np.arange(sorted_run_data[2][0][0]/(time_step), sorted_run_data[2][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Flashers') 
+    ax.hist(sorted_run_data[3][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[3][0]))], bins = np.arange(sorted_run_data[3][0][0]/(time_step), sorted_run_data[3][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Other') 
         
     if extra_lines==True:
-       ax.hist(sorted_run_data[4][1]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[4][1]))], bins = np.arange(sorted_run_data[4][1][0]/(time_step), sorted_run_data[4][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Charge Showers') 
-       ax.hist(sorted_run_data[5][1]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[5][1]))], bins = np.arange(sorted_run_data[5][1][0]/(time_step), sorted_run_data[5][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Time Showers') 
+       ax.hist(sorted_run_data[4][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[4][0]))], bins = np.arange(sorted_run_data[4][0][0]/(time_step), sorted_run_data[4][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Charge Showers') 
+       ax.hist(sorted_run_data[5][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_data[5][0]))], bins = np.arange(sorted_run_data[5][0][0]/(time_step), sorted_run_data[5][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Time Showers') 
 
     ax.legend(loc='upper left')
     ax.set_title(f"Event Rates Run {current_sr[0]}, Subruns 0-{current_sr[1]}")
@@ -276,32 +493,32 @@ def event_rate_hists(current_sr, sorted_run_data, sorted_subrun, resolution, tim
     ax.set_ylabel("Rate [Hz]")
     fig.savefig(f"{display_plots_path}event_rate_histogram.jpg")
     fig.savefig(f"{plots_save_path}run_{current_sr[0]}_event_rate_histogram.jpg")
-    plt.show()
+    plt.close()
     
     if subrun_plots==True:
 
        fig, ax = plt.subplots()
-       ax.hist(sorted_subrun[0][1]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[0][1]))], bins = np.arange(sorted_subrun[0][1][0]/(time_step), sorted_subrun[0][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'All') 
-       ax.hist(sorted_subrun[1][1]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[1][1]))], bins = np.arange(sorted_subrun[1][1][0]/(time_step), sorted_subrun[1][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Showers') 
-       ax.hist(sorted_subrun[2][1]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[2][1]))], bins = np.arange(sorted_subrun[2][1][0]/(time_step), sorted_subrun[2][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Flashers') 
-       ax.hist(sorted_subrun[3][1]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[3][1]))], bins = np.arange(sorted_subrun[3][1][0]/(time_step), sorted_subrun[3][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Other')  
+       ax.hist(sorted_subrun[0][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[0][0]))], bins = np.arange(sorted_subrun[0][0][0]/(time_step), sorted_subrun[0][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'All') 
+       ax.hist(sorted_subrun[1][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[1][0]))], bins = np.arange(sorted_subrun[1][0][0]/(time_step), sorted_subrun[1][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Showers') 
+       ax.hist(sorted_subrun[2][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[2][0]))], bins = np.arange(sorted_subrun[2][0][0]/(time_step), sorted_subrun[2][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Flashers') 
+       ax.hist(sorted_subrun[3][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[3][0]))], bins = np.arange(sorted_subrun[3][0][0]/(time_step), sorted_subrun[3][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Other')  
     
        if extra_lines==True:
-          ax.hist(sorted_subrun[4][1]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[4][1]))], bins = np.arange(sorted_subrun[4][1][0]/(time_step), sorted_subrun[4][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Charge Showers') 
-          ax.hist(sorted_subrun[5][1]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[5][1]))], bins = np.arange(sorted_subrun[5][1][0]/(time_step), sorted_subrun[5][1][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Time Showers')  
+          ax.hist(sorted_subrun[4][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[4][0]))], bins = np.arange(sorted_subrun[4][0][0]/(time_step), sorted_subrun[4][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Charge Showers') 
+          ax.hist(sorted_subrun[5][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun[5][0]))], bins = np.arange(sorted_subrun[5][0][0]/(time_step), sorted_subrun[5][0][-1]/(time_step), (1E9/time_step)/modifier), log=True, histtype = 'step', label = 'Time Showers')  
     
        ax.legend(loc='upper left')
        ax.set_title(f"Event Rates Run {current_sr[0]}, Subrun {current_sr[1]}")
        ax.set_xlabel("Time [min]")
        ax.set_ylabel("Rate [Hz]")
        fig.savefig(f"{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_event_rate.jpg")
-       plt.show()
+       plt.close()
 
 #2d histograms, being actively used
 def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_path, plots_save_path, subrun_plots=False, boxes=True, regions=True, flashers=True, tight=False):
    fig=plt.figure()
    ax=fig.add_subplot(111)
-   ax.hist2d(sorted_run_data[0][2], sorted_run_data[0][3], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
+   ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][2], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
 
    if boxes==True:
        ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[2]), width=(cuts[1]-cuts[0]), height=(cuts[3]-cuts[2]), linewidth=1, color='green', fill=False))
@@ -312,11 +529,11 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
    ax.set_ylabel("Charge std (ADC*ns)")
    fig.savefig(f'{display_plots_path}charge_std_charge_mean_histogram.jpg')
    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_histogram.jpg')
-   plt.show()
+   plt.close()
 
    fig=plt.figure()
    ax=fig.add_subplot(111)
-   ax.hist2d(sorted_run_data[0][2], sorted_run_data[0][5], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
+   ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][4], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
 
    if boxes==True:
        ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[8]), width=(cuts[1]-cuts[0]), height=(cuts[9]-cuts[8]), linewidth=1, color='green', fill=False))
@@ -327,7 +544,7 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
    ax.set_ylabel("Time std (ns)")
    fig.savefig(f'{display_plots_path}time_std_charge_mean_histogram.jpg')
    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_histogram.jpg')
-   plt.show()
+   plt.close()
 
    if regions==True:
       
@@ -340,7 +557,7 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
     
       fig=plt.figure()
       ax=fig.add_subplot(111)
-      ax.hist2d(sorted_run_data[0][2], sorted_run_data[0][3], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=charge_window)
+      ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][2], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=charge_window)
 
       if boxes==True:
          ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[2]), width=(cuts[1]-cuts[0]), height=(cuts[3]-cuts[2]), linewidth=1, color='green', fill=False))
@@ -350,11 +567,11 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
       ax.set_ylabel("Charge std (ADC*ns)")
       fig.savefig(f'{display_plots_path}charge_std_charge_mean_shower_region_histogram.jpg')
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_shower_region_histogram.jpg')
-      plt.show()
+      plt.close()
 
       fig=plt.figure()
       ax=fig.add_subplot(111)
-      ax.hist2d(sorted_run_data[0][2], sorted_run_data[0][5], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=time_window)
+      ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][4], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=time_window)
 
       if boxes==True:
          ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[8]), width=(cuts[1]-cuts[0]), height=(cuts[9]-cuts[8]), linewidth=1, color='green', fill=False))
@@ -364,13 +581,13 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
       ax.set_ylabel("Time std (ns)")
       fig.savefig(f'{display_plots_path}time_std_charge_mean_shower_region_histogram.jpg')
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_shower_region_histogram.jpg')
-      plt.show()
+      plt.close()
    
    if flashers==True:
 
       fig=plt.figure()
       ax=fig.add_subplot(111)
-      ax.hist2d(sorted_run_data[0][2], sorted_run_data[0][3], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=[[cuts[4]-50,cuts[5]+50],[cuts[6]-50, cuts[7]+50]])
+      ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][2], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=[[cuts[4]-50,cuts[5]+50],[cuts[6]-50, cuts[7]+50]])
 
       if boxes==True:
          ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[6]), width=(cuts[5]-cuts[4]), height=(cuts[7]-cuts[6]), linewidth=1, color='red', fill=False))
@@ -380,11 +597,11 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
       ax.set_ylabel("Charge std (ADC*ns)")
       fig.savefig(f'{display_plots_path}charge_std_charge_mean_flasher_region_histogram.jpg')
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_flasher_region_histogram.jpg')
-      plt.show()
+      plt.close()
 
       fig=plt.figure()
       ax=fig.add_subplot(111)
-      ax.hist2d(sorted_run_data[0][2], sorted_run_data[0][5], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=[[cuts[4]-50,cuts[5]+50],[cuts[10]-3,cuts[11]+3]])
+      ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][4], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=[[cuts[4]-50,cuts[5]+50],[cuts[10]-3,cuts[11]+3]])
 
       if boxes==True:
          ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[10]), width=(cuts[5]-cuts[4]), height=(cuts[11]-cuts[10]), linewidth=1, color='red', fill=False))
@@ -394,12 +611,12 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
       ax.set_ylabel("Time std (ns)")
       fig.savefig(f'{display_plots_path}time_std_charge_mean_flasher_region_histogram.jpg')
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_flasher_region_histogram.jpg')
-      plt.show()
+      plt.close()
 
    if subrun_plots==True:
       fig=plt.figure()
       ax=fig.add_subplot(111)
-      ax.hist2d(sr_data[3], sr_data[4], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
+      ax.hist2d(sr_data[1], sr_data[4], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
 
       if boxes==True:
          ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[2]), width=(cuts[1]-cuts[0]), height=(cuts[3]-cuts[2]), linewidth=1, color='green', fill=False))
@@ -409,7 +626,7 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
       ax.set_xlabel("Mean charge (ADC*ns)")
       ax.set_ylabel("Charge std (ADC*ns)")
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_histogram.jpg')
-      plt.show()
+      plt.close()
 
       fig=plt.figure()
       ax=fig.add_subplot(111)
@@ -423,7 +640,7 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
       ax.set_xlabel("Mean charge (ADC*ns)")
       ax.set_ylabel("Time std (ns)")
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_histogram.jpg')
-      plt.show()
+      plt.close()
 
       if regions==True:
       
@@ -445,7 +662,7 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
          ax.set_xlabel("Mean charge (ADC*ns)")
          ax.set_ylabel("Charge std (ADC*ns)")
          fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_shower_region_histogram.jpg')
-         plt.show()
+         plt.close()
 
          fig=plt.figure()
          ax=fig.add_subplot(111)
@@ -458,7 +675,7 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
          ax.set_xlabel("Mean charge (ADC*ns)")
          ax.set_ylabel("Time std (ns)")
          fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_shower_region_histogram.jpg')
-         plt.show()
+         plt.close()
          
       if flashers==True:
 
@@ -473,7 +690,7 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
          ax.set_xlabel("Mean charge (ADC*ns)")
          ax.set_ylabel("Charge std (ADC*ns)")
          fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_flasher_region_histogram.jpg')
-         plt.show()
+         plt.close()
 
          fig=plt.figure()
          ax=fig.add_subplot(111)
@@ -486,13 +703,13 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
          ax.set_xlabel("Mean charge (ADC*ns)")
          ax.set_ylabel("Time std (ns)")
          fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_flasher_region_histogram.jpg')
-         plt.show()
+         plt.close()
 
 #1d histograms, being used currently but seems buggy
 def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_path, plots_save_path, subrun_plots=False, boxes=True, regions=True, flashers=True):
     fig=plt.figure()
     ax=fig.add_subplot(111)
-    ax.hist(sorted_run_data[0][2], bins = 400, log=True)
+    ax.hist(sorted_run_data[0][2], bins = 200, log=True)
 
     if boxes==True:
         ax.add_patch(patches.Rectangle(xy=(cuts[0],0), width=(cuts[1]-cuts[0]), height=(1400), linewidth=1, color='green', fill=False))
@@ -503,11 +720,11 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
     ax.set_ylabel("Counts")
     fig.savefig(f'{display_plots_path}charge_mean_histogram.jpg')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_histogram.jpg')
-    plt.show()
+    plt.close()
 
     fig=plt.figure()
     ax=fig.add_subplot(111)
-    ax.hist(sorted_run_data[0][3], bins = 400, log=True)
+    ax.hist(sorted_run_data[0][3], bins = 200, log=True)
 
     if boxes==True:
         ax.add_patch(patches.Rectangle(xy=(cuts[2],0), width=(cuts[3]-cuts[2]), height=(1400), linewidth=1, color='green', fill=False))
@@ -518,21 +735,21 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
     ax.set_ylabel("Counts")
     fig.savefig(f'{display_plots_path}charge_std_histogram.jpg')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_histogram.jpg')
-    plt.show()
+    plt.close()
 
     fig=plt.figure()
     ax=fig.add_subplot(111)
-    ax.hist(sorted_run_data[0][4], bins = 400, log=True)
+    ax.hist(sorted_run_data[0][4], bins = 200, log=True)
     ax.set_title(f"Mean Peak Time, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)")
     ax.set_xlabel("Mean Peak Time (ns)")
     ax.set_ylabel("Counts")
     fig.savefig(f'{display_plots_path}time_mean_histogram.jpg')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_mean_histogram.jpg')
-    plt.show()
+    plt.close()
 
     fig=plt.figure()
     ax=fig.add_subplot(111)
-    ax.hist(sorted_run_data[0][5], bins = 400, log=True)
+    ax.hist(sorted_run_data[0][5], bins = 200, log=True)
 
     if boxes==True:
         ax.add_patch(patches.Rectangle(xy=(cuts[8],0), width=(cuts[9]-cuts[8]), height=(1400), linewidth=1, color='green', fill=False))
@@ -543,12 +760,12 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
     ax.set_ylabel("Counts")
     fig.savefig(f'{display_plots_path}time_std_histogram.jpg')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_histogram.jpg')
-    plt.show()
+    plt.close()
 
     if regions==True:
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sorted_run_data[0][2], bins = 400, log=True, range=(cuts[0]-50, cuts[1]+50))
+        ax.hist(sorted_run_data[0][2], bins = 200, log=True, range=(cuts[0]-50, cuts[1]+50))
 
         if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[0],0), width=(cuts[1]-cuts[0]), height=(1400), linewidth=1, color='green', fill=False))
@@ -558,11 +775,11 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.set_ylabel("Counts")
         fig.savefig(f'{display_plots_path}charge_mean_shower_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_shower_region_histogram.jpg')
-        plt.show()
+        plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sorted_run_data[0][3], bins = 400, log=True, range=(cuts[2]-50,cuts[3]+50))
+        ax.hist(sorted_run_data[0][3], bins = 200, log=True, range=(cuts[2]-50,cuts[3]+50))
 
         if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[2],0), width=(cuts[3]-cuts[2]), height=(1400), linewidth=1, color='green', fill=False))
@@ -572,11 +789,11 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.set_ylabel("Counts")
         fig.savefig(f'{display_plots_path}charge_std_shower_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_shower_region_histogram.jpg')
-        plt.show()
+        plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sorted_run_data[0][5], bins = 400, log=True, range=(cuts[8]-3, cuts[9]+3))
+        ax.hist(sorted_run_data[0][5], bins = 200, log=True, range=(cuts[8]-3, cuts[9]+3))
 
         if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[8],0), width=(cuts[9]-cuts[8]), height=(1400), linewidth=1, color='green', fill=False))
@@ -586,12 +803,12 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.set_ylabel("Counts")
         fig.savefig(f'{display_plots_path}time_std_shower_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_shower_region_histogram.jpg')
-        plt.show()
+        plt.close()
 
     if flashers==True:
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sorted_run_data[0][2], bins = 400, log=True, range=(cuts[4]-50, cuts[5]+50))
+        ax.hist(sorted_run_data[0][2], bins = 200, log=True, range=(cuts[4]-50, cuts[5]+50))
 
         if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[4],0), width=(cuts[5]-cuts[4]), height=(1400), linewidth=1, color='red', fill=False))
@@ -601,11 +818,11 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.set_ylabel("Counts")
         fig.savefig(f'{display_plots_path}charge_mean_flasher_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_flasher_region_histogram.jpg')
-        plt.show()
+        plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sorted_run_data[0][3], bins = 400, log=True, range=(cuts[6]-50,cuts[7]+50))
+        ax.hist(sorted_run_data[0][3], bins = 200, log=True, range=(cuts[6]-50,cuts[7]+50))
 
         if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[6],0), width=(cuts[7]-cuts[6]), height=(1400), linewidth=1, color='red', fill=False))
@@ -615,11 +832,11 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.set_ylabel("Counts")
         fig.savefig(f'{display_plots_path}charge_std_flasher_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_flasher_region_histogram.jpg')
-        plt.show()
+        plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sorted_run_data[0][5], bins = 400, log=True, range=(cuts[10]-3, cuts[11]+3))
+        ax.hist(sorted_run_data[0][5], bins = 200, log=True, range=(cuts[10]-3, cuts[11]+3))
 
         if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[10],0), width=(cuts[11]-cuts[10]), height=(1400), linewidth=1, color='red', fill=False))
@@ -629,12 +846,12 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.set_ylabel("Counts")
         fig.savefig(f'{display_plots_path}time_std_flasher_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_flasher_region_histogram.jpg')
-        plt.show()
+        plt.close()
 
     if subrun_plots==True:
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sr_data[3], bins = 400, log=True)
+        ax.hist(sr_data[3], bins = 200, log=True)
 
         if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[0],0), width=(cuts[1]-cuts[0]), height=(1400), linewidth=1, color='green', fill=False))
@@ -644,11 +861,11 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.set_xlabel("Mean charge (ADC*ns)")
         ax.set_ylabel("Counts")
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_mean_histogram.jpg')
-        plt.show()
+        plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sr_data[4], bins = 400, log=True)
+        ax.hist(sr_data[4], bins = 200, log=True)
 
         if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[2],0), width=(cuts[3]-cuts[2]), height=(1400), linewidth=1, color='green', fill=False))
@@ -658,20 +875,20 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.set_xlabel("Charge Std (ADC*ns)")
         ax.set_ylabel("Counts")
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_histogram.jpg')
-        plt.show()
+        plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sr_data[1], bins = 400, log=True)
+        ax.hist(sr_data[1], bins = 200, log=True)
         ax.set_title(f"Mean Peak Time, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)")
         ax.set_xlabel("Mean Peak Time (ns)")
         ax.set_ylabel("Counts")
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_mean_histogram.jpg')
-        plt.show()
+        plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sr_data[2], bins = 400, log=True)
+        ax.hist(sr_data[2], bins = 200, log=True)
 
         if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[8],0), width=(cuts[9]-cuts[8]), height=(1400), linewidth=1, color='green', fill=False))
@@ -681,12 +898,12 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.set_xlabel("Peak Time Std (ns)")
         ax.set_ylabel("Counts")
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_histogram.jpg')
-        plt.show()
+        plt.close()
 
         if regions==True:
             fig=plt.figure()
             ax=fig.add_subplot(111)
-            ax.hist(sr_data[3], bins = 400, log=True, range=(cuts[0]-50, cuts[1]+50))
+            ax.hist(sr_data[3], bins = 200, log=True, range=(cuts[0]-50, cuts[1]+50))
 
             if boxes==True:
                 ax.add_patch(patches.Rectangle(xy=(cuts[0],0), width=(cuts[1]-cuts[0]), height=(1400), linewidth=1, color='green', fill=False))
@@ -695,11 +912,11 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
             ax.set_xlabel("Mean Charge (ADC*ns)")
             ax.set_ylabel("Counts")
             fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_mean_shower_region_histogram.jpg')
-            plt.show()
+            plt.close()
 
             fig=plt.figure()
             ax=fig.add_subplot(111)
-            ax.hist(sr_data[4], bins = 400, log=True, range=(cuts[2]-50,cuts[3]+50))
+            ax.hist(sr_data[4], bins = 200, log=True, range=(cuts[2]-50,cuts[3]+50))
 
             if boxes==True:
                 ax.add_patch(patches.Rectangle(xy=(cuts[2],0), width=(cuts[3]-cuts[2]), height=(1400), linewidth=1, color='green', fill=False))
@@ -708,11 +925,11 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
             ax.set_xlabel("Charge Std (ADC*ns)")
             ax.set_ylabel("Counts")
             fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_shower_region_histogram.jpg')
-            plt.show()
+            plt.close()
 
             fig=plt.figure()
             ax=fig.add_subplot(111)
-            ax.hist(sr_data[2], bins = 400, log=True, range=(cuts[8]-3, cuts[9]+3))
+            ax.hist(sr_data[2], bins = 200, log=True, range=(cuts[8]-3, cuts[9]+3))
 
             if boxes==True:
                 ax.add_patch(patches.Rectangle(xy=(cuts[8],0), width=(cuts[9]-cuts[8]), height=(1400), linewidth=1, color='green', fill=False))
@@ -721,12 +938,12 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
             ax.set_xlabel("Peak Time Std (ns)")
             ax.set_ylabel("Counts")
             fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_shower_region_histogram.jpg')
-            plt.show()
+            plt.close()
 
         if flashers==True:
             fig=plt.figure()
             ax=fig.add_subplot(111)
-            ax.hist(sr_data[3], bins = 400, log=True, range=(cuts[4]-50, cuts[5]+50))
+            ax.hist(sr_data[3], bins = 200, log=True, range=(cuts[4]-50, cuts[5]+50))
 
             if boxes==True:
                 ax.add_patch(patches.Rectangle(xy=(cuts[4],0), width=(cuts[5]-cuts[4]), height=(1400), linewidth=1, color='red', fill=False))
@@ -735,11 +952,11 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
             ax.set_xlabel("Mean Charge (ADC*ns)")
             ax.set_ylabel("Counts")
             fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_mean_flasher_region_histogram.jpg')
-            plt.show()
+            plt.close()
 
             fig=plt.figure()
             ax=fig.add_subplot(111)
-            ax.hist(sr_data[4], bins = 400, log=True, range=(cuts[6]-50,cuts[7]+50))
+            ax.hist(sr_data[4], bins = 200, log=True, range=(cuts[6]-50,cuts[7]+50))
 
             if boxes==True:
                 ax.add_patch(patches.Rectangle(xy=(cuts[6],0), width=(cuts[7]-cuts[6]), height=(1400), linewidth=1, color='red', fill=False))
@@ -748,11 +965,11 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
             ax.set_xlabel("Charge Std (ADC*ns)")
             ax.set_ylabel("Counts")
             fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_flasher_region_histogram.jpg')
-            plt.show()
+            plt.close()
 
             fig=plt.figure()
             ax=fig.add_subplot(111)
-            ax.hist(sr_data[2], bins = 400, log=True, range=(cuts[10]-3, cuts[11]+3))
+            ax.hist(sr_data[2], bins = 200, log=True, range=(cuts[10]-3, cuts[11]+3))
 
             if boxes==True:
                 ax.add_patch(patches.Rectangle(xy=(cuts[10],0), width=(cuts[11]-cuts[10]), height=(1400), linewidth=1, color='red', fill=False))
@@ -761,53 +978,53 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
             ax.set_xlabel("Peak Time Std (ns)")
             ax.set_ylabel("Counts")
             fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_flasher_region_histogram.jpg')
-            plt.show()
+            plt.close()
 
-#older event rate function, likely to be deleted
-def event_rate(sorted_data, sr_data, run_id, sr_number, save_location, mod=1, test=False):
-    modifier=mod
-    # fig=plt.figure()
-    # ax=fig.add_subplot(111)
-    fig, ax = plt.subplots()
-    ax.hist(sr_data[5], weights = [modifier for _ in range(len(sr_data[5]))], bins = np.arange(sr_data[5][0], sr_data[5][-1], 1E9/modifier), log=True, histtype = 'step', label = 'All') 
-    ax.hist(sorted_data[0][1], weights = [modifier for _ in range(len(sorted_data[0][1]))], bins = np.arange(sorted_data[0][1][0], sorted_data[0][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'Showers') 
-    ax.hist(sorted_data[1][1], weights = [modifier for _ in range(len(sorted_data[1][1]))], bins = np.arange(sorted_data[1][1][0], sorted_data[1][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'Flashers') 
-    ax.hist(sorted_data[2][1], weights = [modifier for _ in range(len(sorted_data[2][1]))], bins = np.arange(sorted_data[2][1][0], sorted_data[2][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'Other') 
+# #older event rate function, likely to be deleted
+# def event_rate(sorted_data, sr_data, run_id, sr_number, save_location, mod=1, test=False):
+#     modifier=mod
+#     # fig=plt.figure()
+#     # ax=fig.add_subplot(111)
+#     fig, ax = plt.subplots()
+#     ax.hist(sr_data[5], weights = [modifier for _ in range(len(sr_data[5]))], bins = np.arange(sr_data[5][0], sr_data[5][-1], 1E9/modifier), log=True, histtype = 'step', label = 'All') 
+#     ax.hist(sorted_data[0][1], weights = [modifier for _ in range(len(sorted_data[0][1]))], bins = np.arange(sorted_data[0][1][0], sorted_data[0][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'Showers') 
+#     ax.hist(sorted_data[1][1], weights = [modifier for _ in range(len(sorted_data[1][1]))], bins = np.arange(sorted_data[1][1][0], sorted_data[1][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'Flashers') 
+#     ax.hist(sorted_data[2][1], weights = [modifier for _ in range(len(sorted_data[2][1]))], bins = np.arange(sorted_data[2][1][0], sorted_data[2][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'Other') 
     
-    if test==True:
-       ax.hist(sorted_data[3][1], weights = [modifier for _ in range(len(sorted_data[3][1]))], bins = np.arange(sorted_data[3][1][0], sorted_data[3][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'charge showers') 
-       ax.hist(sorted_data[6][1], weights = [modifier for _ in range(len(sorted_data[6][1]))], bins = np.arange(sorted_data[6][1][0], sorted_data[6][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'time showers') 
+#     if test==True:
+#        ax.hist(sorted_data[3][1], weights = [modifier for _ in range(len(sorted_data[3][1]))], bins = np.arange(sorted_data[3][1][0], sorted_data[3][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'charge showers') 
+#        ax.hist(sorted_data[6][1], weights = [modifier for _ in range(len(sorted_data[6][1]))], bins = np.arange(sorted_data[6][1][0], sorted_data[6][1][-1], 1E9/modifier), log=True, histtype = 'step', label = 'time showers') 
    
-    ax.legend(loc='upper left')
-    ax.set_title(f"Event Rates Run {run_id}, subrun {sr_number}")
-    ax.set_xlabel("Time [ns]")
-    ax.set_ylabel("Rate [Hz]")
-    fig.savefig(save_location)
-    print("summary plot B has actually been generated")
-    plt.show()
+#     ax.legend(loc='upper left')
+#     ax.set_title(f"Event Rates Run {run_id}, subrun {sr_number}")
+#     ax.set_xlabel("Time [ns]")
+#     ax.set_ylabel("Rate [Hz]")
+#     fig.savefig(save_location)
+#     print("summary plot B has actually been generated")
+#     plt.show()
 
 #makes histogram of rates with or without some test lines that help with refining box cuts, to be deleted
-def event_rate_summary(run_id, sr_number, r0_location, tcal_location, r1_location, save_location, test=False, resolution=1):
+# def event_rate_summary(run_id, sr_number, r0_location, tcal_location, r1_location, save_location, test=False, resolution=1):
 
-    sr_id=sr_number
-    r0_file=r0_location+'run'+str(run_id)+'_subrun'+str(sr_id)+'_r0.tio'
+#     sr_id=sr_number
+#     r0_file=r0_location+'run'+str(run_id)+'_subrun'+str(sr_id)+'_r0.tio'
 
-    tcal_file=tcal_location
+#     tcal_file=tcal_location
 
-    r1_file=r1_location+'run'+str(run_id)+'_subrun'+str(sr_id)+'.r1'
+#     r1_file=r1_location+'run'+str(run_id)+'_subrun'+str(sr_id)+'.r1'
 
-    reader=get_reader(r0_file, tcal_file, r1_file)
+#     reader=get_reader(r0_file, tcal_file, r1_file)
 
-    sr_data=collect_stats(reader) 
+#     sr_data=collect_stats(reader) 
 
 
-    cuts=get_cuts()
+#     cuts=get_cuts()
     
-    get_hists(sr_data, cuts, display=test, regions= test, flashers= test, boxes= test)
+#     get_hists(sr_data, cuts, display=test, regions= test, flashers= test, boxes= test)
 
-    sorted_data=sort_data(sr_data, cuts, list=test)
+#     sorted_data=sort_data(sr_data, cuts, list=test)
 
-    event_rate(sorted_data, sr_data, run_id, sr_number, save_location, test=test, mod=resolution)
+#     event_rate(sorted_data, sr_data, run_id, sr_number, save_location, test=test, mod=resolution)
 
     #Produces the whole nice graph thing
 
@@ -883,19 +1100,19 @@ def physical_summary(current_sr, run_data, physical_metrics_location, display_pl
     #fig.set_label(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]}, Physical Metrics") #should be a title for the thing, not currently working
     fig.savefig(f'{display_plots_path}physical_metrics_plots.jpg')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_physical_metrics.jpg')
-    plt.show()
+    plt.close()
     
 #CONDENSED FUNCTION, to be deleted
 
-def sr_summary(run_id, sr_number, metrics_location, r0_location, tcal_location, r1_location, ev_save_location, phys_save_location, test=False, resolution=1, modules=22):
+# def sr_summary(run_id, sr_number, metrics_location, r0_location, tcal_location, r1_location, ev_save_location, phys_save_location, test=False, resolution=1, modules=22):
 
-    event_rate_summary(run_id, sr_number, r0_location, tcal_location, r1_location, ev_save_location, test=False, resolution=resolution)
-    print("Summary plot B has been generated")
+#     event_rate_summary(run_id, sr_number, r0_location, tcal_location, r1_location, ev_save_location, test=False, resolution=resolution)
+#     print("Summary plot B has been generated")
 
-    physical_summary(run_id, sr_number, metrics_location, phys_save_location, modules=modules)
-    print("Summary plot A has been generated")
+#     physical_summary(run_id, sr_number, metrics_location, phys_save_location, modules=modules)
+#     print("Summary plot A has been generated")
 
-    print(f"Run {run_id} sr{sr_number} summary")
+#     print(f"Run {run_id} sr{sr_number} summary")
 
 #NEWEST FILE DETECTOR function, in use
 
@@ -916,31 +1133,32 @@ def get_new_sr(physical_metrics_location, run_base=400196, subrun_base=0): #bein
          subrun=subrun_base
    return run, subrun
 
-active=False
+# active=False
 
-while active==True: #This is the important cell that manages everything but it's rough and being phased out
+# while active==True: #This is the important cell that manages everything but it's rough and being phased out
    
-    current_sr=get_new_sr()
-    print(f"Latest Subrun: Run {current_sr[0]} sr{current_sr[1]}")
+#     current_sr=get_new_sr()
+#     print(f"Latest Subrun: Run {current_sr[0]} sr{current_sr[1]}")
 
-    if os.path.exists(f"{physical_metrics_location}Current_FEEs_run{current_sr[0]}_subrun{current_sr[1]}.npy")==True:
-       tim_n = time.time()
-       sr_summary(current_sr[0], current_sr[1], physical_metrics_location, r0_file_location, pedestal_path, new_r1_file_location, summary_plots_location_1, summary_plots_location_2)
-       print(f'Summary for Subrun {current_sr[1]} took {time.time()-tim_n}s')
-    else:
-        print("This file doesn't exist yet")
-        time.sleep(5)
-    next_sr=get_new_sr()
-    while current_sr==next_sr:
-       next_sr=get_new_sr()
+#     if os.path.exists(f"{physical_metrics_location}Current_FEEs_run{current_sr[0]}_subrun{current_sr[1]}.npy")==True:
+#        tim_n = time.time()
+#        sr_summary(current_sr[0], current_sr[1], physical_metrics_location, r0_file_location, pedestal_path, new_r1_file_location, summary_plots_location_1, summary_plots_location_2)
+#        print(f'Summary for Subrun {current_sr[1]} took {time.time()-tim_n}s')
+#     else:
+#         print("This file doesn't exist yet")
+#         time.sleep(5)
+#     next_sr=get_new_sr()
+#     while current_sr==next_sr:
+#        next_sr=get_new_sr()
 
-       if current_sr[1]==last_subrun: #This line just stops this from going forever, comment out when not working with simulator
-           active=False
-           break
+#        if current_sr[1]==last_subrun: #This line just stops this from going forever, comment out when not working with simulator
+#            active=False
+#            break
 
 total_run_data=[]
 run_data_sorted=[]
-
+live_monitoring= False
+#live monitoring loop is not fully broken but the histograms will turn out very wonky if you try
 while live_monitoring==True:
 
     current_sr=get_new_sr(physical_metrics_location, run_base=run_base, subrun_base=0)
@@ -957,6 +1175,7 @@ while live_monitoring==True:
         r1_file=new_r1_file_location+'run'+str(current_sr[0])+'_subrun'+str(current_sr[1])+'.r1'
 
         reader=get_reader(r0_file, tcal_file, r1_file) #get reader data
+        time_s=time.time()
         sr_data=collect_stats(reader) #get useable stats from reader
         cuts=get_cuts() #get histogram cuts
         total_run_data.append(sr_data)#puts data for newest sr in the list for the whole run with shape [subrun][type of metric][event]
@@ -995,26 +1214,27 @@ while live_monitoring==True:
                 sorted_run_data[type][4][event]=total_run_data[int(types_list[type][event][1])][1][int(types_list[type][event][0])]
                 sorted_run_data[type][5][event]=total_run_data[int(types_list[type][event][1])][2][int(types_list[type][event][0])]
 
+        print(f'\nsorting the data took {time.time()-time_s} s')
         #event rate histograms here
         time_h=time.time()
         event_rate_hists(current_sr, sorted_run_data, sorted_subrun, resolution, time_step, display_plots_path, plots_save_path, extra_lines=extra_lines, subrun_plots=subrun_plots)#event rate histograms for overall run and subrun
-        print(f'\n event rate histograms took {time.time()-time_h}s\n')
+        print(f'\n event rate histograms took {time.time()-time_h} s\n')
         #2d histogram function here
         time_ht=time.time()
         sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_path, plots_save_path, subrun_plots=subrun_plots, boxes=boxes, regions=noise_shower_regions, flashers=flasher_regions, tight=tight_windows)
-        print(f'\n 2d histograms took {time.time()-time_ht}s\n')
+        print(f'\n 2d histograms took {time.time()-time_ht} s\n')
         #1d histogram function
         time_ho=time.time()
         sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_path, plots_save_path, subrun_plots=subrun_plots, boxes=boxes, regions=noise_shower_regions, flashers=flasher_regions)
-        print(f'\n 1d histograms took {time.time()-time_ho}s\n')
+        print(f'\n 1d histograms took {time.time()-time_ho} s\n')
         #physical metrics graph function
         time_p=time.time()
         physical_summary(current_sr, total_run_data, physical_metrics_location, display_plots_path, plots_save_path, time_step, modules=modules)
-        print(f'\n physical metrics took {time.time()-time_p}s\n')
+        print(f'\n physical metrics took {time.time()-time_p} s\n')
         #'heat' maps/camera visualizations function here
 
         #space to add other graphing options that take 
-        print(f'\nsummary of run {current_sr[0]} subrun {current_sr[1]} took {time.time()-tim_n}s\n')
+        print(f'\nsummary of run {current_sr[0]} subrun {current_sr[1]} took {time.time()-tim_n} s\n')
     else:
         print("this file doesn't exist yet")
 
@@ -1032,5 +1252,103 @@ while live_monitoring==True:
             print(f'run {current_sr[0]} has ended')
             break #should detect when a run has ticked over to break the loop of waiting for a new subrun if the above loop doesn't work
 
+current_target=initial_subrun
+runs=[]
+subruns=[]
+sorted_run_data_format=[[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]]]
+sorted_run_data=sorted_run_data_format
+run_data=[]
+while monitoring==True:
+    print(f'\nlooking at run {current_target[0]}, sub-run {current_target[1]}')
 
+    if os.path.exists(f'/data/user/fbivens5020/mock_data/run{current_target[0]}_subrun{current_target[1]}_r0.tio'):
+        print(f'\nr0 file for {current_target} found')
+        if os.path.exists(f'/data/user/fbivens5020/mock_data/Current_FEEs_run{current_target[0]}_subrun{current_target[1]}.npy'):
+            print('\nand it is ready for analysis')
+        else:
+            print('\nbut it is not ready for analysis')
+            ready=False
+            while ready==False:
+                ready=os.path.exists(f'/data/user/fbivens5020/mock_data/Current_FEEs_run{current_target[0]}_subrun{current_target[1]}.npy')
+            print('\nit is now ready for analysis')
+    else:
+        print(f'no r0 file for {current_target} found')
+        ready=False
+        while ready==False:
+            ready=os.path.exists(f'/data/user/fbivens5020/mock_data/run{current_target[0]}_subrun{current_target[1]}_r0.tio')
+        print('\nfile has been found')
+        continue
+    
+    if current_target[1]==0:
+        subruns=[]
+        run_data=[]
+        sorted_run_data=sorted_run_data_format
+        runs.append(current_target[0])
+    
+    subruns.append(current_target[1])
+
+    print(f'\ndoing all the things and such for run {current_target[0]} subrun {current_target[1]}')
+
+    tim_n=time.time()
+
+    r0_file=r0_file_location+'run'+str(current_target[0])+'_subrun'+str(current_target[1])+'_r0.tio'
+    tcal_file=pedestal_path
+    r1_file=new_r1_file_location+'run'+str(current_target[0])+'_subrun'+str(current_target[1])+'.r1'
+
+    reader=get_reader(r0_file, tcal_file, r1_file) #get reader data
+    time_s=time.time()
+    sr_data=collect_stats(reader) #get useable stats from reader
+    cuts=get_cuts() #get histogram cuts
+    total_run_data.append(sr_data)#puts data for newest sr in the list for the whole run with shape [subrun][type of metric][event]
+
+    sort=real_new_sort(sr_data, current_target[1], sorted_run_data, cuts) #new sorting function it should spit out a nice big list with all relevant data
+
+    sorted_run_data=sort[0]
+    sorted_subrun=sort[1]
+    sorted_run_array=[]
+    for type in range(8):
+        sorted_run_array.append(np.array(sorted_run_data[type]))
+    sorted_subrun_array=[]
+    for type in range(8):
+        sorted_subrun_array.append(np.array(sorted_subrun[type]))
+
+    print(f'\nEvents: {len(sorted_subrun_array[0][0])}, showers: {len(sorted_subrun_array[1][0])}, flashers: {len(sorted_subrun_array[2][0])}, noise: {len(sorted_subrun_array[3][0])}')
+
+    print(f'\nsorting the data took {time.time()-time_s} s')
+        #event rate histograms here
+    time_h=time.time()
+    event_rate_hists(current_target, sorted_run_array, sorted_subrun_array, resolution, time_step, display_plots_path, plots_save_path, extra_lines=extra_lines, subrun_plots=subrun_plots)#event rate histograms for overall run and subrun
+    print(f'\n event rate histograms took {time.time()-time_h} s\n')
+    #2d histogram function here
+    time_ht=time.time()
+    sorting_hists_2d(cuts, current_target, sorted_run_array, sr_data, display_plots_path, plots_save_path, subrun_plots=subrun_plots, boxes=boxes, regions=noise_shower_regions, flashers=flasher_regions, tight=tight_windows)
+    print(f'\n 2d histograms took {time.time()-time_ht} s\n')
+    #1d histogram function
+    time_ho=time.time()
+    sorting_hists_1d(cuts, current_target, sorted_run_array, sr_data, display_plots_path, plots_save_path, subrun_plots=subrun_plots, boxes=boxes, regions=noise_shower_regions, flashers=flasher_regions)
+    print(f'\n 1d histograms took {time.time()-time_ho} s\n')
+    #physical metrics graph function
+    time_p=time.time()
+    physical_summary(current_target, total_run_data, physical_metrics_location, display_plots_path, plots_save_path, time_step, modules=modules)
+    print(f'\n physical metrics took {time.time()-time_p} s\n')
+    #'heat' maps/camera visualizations function here
+    
+
+    print(f'\nruns covered: {runs}\nsubruns covered: {subruns}')
+
+    if current_target==final_subrun:
+        print('\nfinal subrun reached, ending monitoring')
+        break
+
+    if os.path.exists(f'/data/user/fbivens5020/mock_data/run{current_target[0]+1}_subrun{0}_r0.tio'):
+        current_target[0]+=1
+        current_target[1]=0
+        print('\nnew run detected')
+        continue
+
+    current_target[1]+=1
+    print('\nrestarting loop')
+
+
+       
 
