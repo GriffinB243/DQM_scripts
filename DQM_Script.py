@@ -21,7 +21,7 @@ monitoring=True #run the loop
 live=True #is data being taken live, if true will detect the most recent run and start looking at the next run after that
 run_base=400214 #base for function that finds most recent run. only needs to be specific if there aren't any earlier runs in the file
 initial_subrun=[400215,0] #first run and subrun to look at for existing data
-final_subrun=[400215,5] #last subrun, can be used as a stopping point for live monitoring and looking at existing data
+final_subrun=[400215,15] #last subrun, can be used as a stopping point for live monitoring and looking at existing data
 
 histograms_1d=True #true/false, will 1d histograms be generated at all
 histograms_2d=True #true/false, will 2d histograms be generated at all
@@ -29,13 +29,13 @@ subrun_plots=True #true/false decides if plots will be generated and saved for a
 boxes=True #true/false, will the cut boxes be visible on the histograms
 noise_shower_regions=True #true/false, plots for the noise/shower region will be generated
 flasher_regions=True #true/false, plots for flasher regions will be generated
-tight_windows=False #true/false if false the region graphs look at the whole sorting box, if true they look at a tighter region for more detail between showers and flashers
+tight_windows=True #true/false if false the region graphs look at the whole sorting box, if true they look at a tighter region for more detail between showers and flashers
 
 extra_lines=False #true/false the lines for showers according to charge std and time std separately will be shown
 resolution=1 #modifier on histogram bin sizes, 1 is a bin per second, 5 is a bin per fifth of a second, etc. it's set up to leave rate invariant
 time_step=60E9 #modifier for the time scale, 60 billion is to take ns to min
 
-subrun_plots=True #true/false decides if versions of
+subrun_plots=True #true/false decides if versions of every graph are made for each subrun as well
 display_plots_path="/data/user/fbivens5020/DQM_scripts/DQM_plots/display_plots/"# path to folder of display files, these are the ones being overwritten through the loop
 plots_save_path= "/data/user/fbivens5020/DQM_scripts/DQM_plots/subrun_plots/" #place to save all generated plot files for each run and subrun
 
@@ -135,7 +135,7 @@ def collect_stats(reader): #being actively used
 #returns the sr_data object which is sr[0]: all wfs, sr[1]: mean time, sr[1][ev]: mean time for an event, sr[2]: time std
 #sr[3]: charge mean, sr[4]: charge std, sr[5]: event time
 
-def get_cuts(): #being actively used
+def get_cuts(): #being actively used though i really want to change how this one works
     charge_mean_shower_max=2000
     charge_mean_shower_min=40
 
@@ -146,7 +146,7 @@ def get_cuts(): #being actively used
     charge_mean_flasher_min=2000
 
     charge_std_flasher_max=1750
-    charge_std_flasher_min=800
+    charge_std_flasher_min=400
 
     time_std_shower_max=21
     time_std_shower_min=14
@@ -254,12 +254,33 @@ def sort_data(sr_data, cuts, list=False): #Out
     return all_events_data, conf_showers, conf_flashers, conf_noise, charge_showers, time_showers, charge_flashers, time_flashers, charge_noise, time_noise
     
 #sorts the data into 9 lists, should be used to create the sorted_data object which has 9 sections with 2 indexes each
-def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and being used
+
+#new awesome sorting function in use, is only broken in a couple of ways
+def real_new_sort(sr_data, subrun, sorted_run_data, cuts, subruns):
    confirmations=[[],[],[],[],0]
    sorted_subrun=[[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]]]
    for ev in range(len(sr_data[0])):
+        
         #all events data
-        sorted_run_data[0][0].append(sr_data[5][ev]) #event time
+        if subrun==0 and ev==0:
+            subruns.append([subrun, sr_data[5][ev]]) #if first subrun of run record id and starting time
+            sorted_run_data[0][0].append(sr_data[5][ev]-subruns[0][1]) #set first time to 0
+            sorted_run_data[0][7].append(0) #set first dt to zero
+            sorted_subrun[0][0].append(sr_data[5][ev]-subruns[-1][1]) #set starting subrun time to 0
+            sorted_subrun[0][7].append(0) #set first dt of subrun to 0
+        elif ev==0:
+            sorted_run_data[0][0].append(sr_data[5][ev]-subruns[0][1]) # do event time as normal
+            sorted_run_data[0][7].append(sorted_run_data[0][0][-1]-sorted_run_data[0][0][-2]) #do time dt as normal
+            #start of just for subrun stuff
+            subruns.append([subrun, sr_data[5][ev]]) #if first event of subrun record id and starting time
+            sorted_subrun[0][0].append(sr_data[5][ev]-subruns[-1][1]) #set starting subrun time to 0
+            sorted_subrun[0][7].append(0) #set first dt of subrun to 0
+        else:
+            sorted_run_data[0][0].append(sr_data[5][ev]-subruns[0][1]) #do event time like normal
+            sorted_run_data[0][7].append(sorted_run_data[0][0][-1]-sorted_run_data[0][0][-2]) #delta t, this could be done with sr data directly i'm doing it like this for consistency
+            sorted_subrun[0][0].append(sr_data[5][ev]-subruns[-1][1]) #subrun event time like normal
+            sorted_subrun[0][7].append(sorted_subrun[0][0][-1]-sorted_subrun[0][0][-2]) #do subrun dt like normal
+            
         sorted_run_data[0][1].append(sr_data[3][ev]) #mean charge
         sorted_run_data[0][2].append(sr_data[4][ev]) #charge std
         sorted_run_data[0][3].append(sr_data[1][ev]) #mean time
@@ -267,7 +288,6 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
         sorted_run_data[0][5].append(ev)#event id inside subrun
         sorted_run_data[0][6].append(subrun)# subrun id to make event id usable
         #again but for the subrun only
-        sorted_subrun[0][0].append(sr_data[5][ev]) #event time
         sorted_subrun[0][1].append(sr_data[3][ev]) #mean charge
         sorted_subrun[0][2].append(sr_data[4][ev]) #charge std
         sorted_subrun[0][3].append(sr_data[1][ev]) #mean time
@@ -275,18 +295,10 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
         sorted_subrun[0][5].append(ev)#event id inside subrun
         sorted_subrun[0][6].append(subrun)# subrun id to make event id usable
 
-        if ev==0:
-            sorted_run_data[0][7].append(0)
-            sorted_subrun[0][7].append(0)
-            subruns.append([subrun, sr_data[5][ev]]) #if first event delta t =0, also record the subrun start time
-        else:
-            sorted_run_data[0][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
-            sorted_subrun[0][7].append(sr_data[5][ev]-sr_data[5][ev-1])
-
-        if sr_data[3][ev]>cuts[1] and sr_data[3][ev]<cuts[0] and sr_data[4][ev]>cuts[3] and sr_data[4][ev]<cuts[2]:
+        if sr_data[3][ev]>cuts[0] and sr_data[3][ev]<cuts[1] and sr_data[4][ev]>cuts[2] and sr_data[4][ev]<cuts[3]:
             #charge showers
             confirmations[0].append(ev)
-            sorted_run_data[4][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[4][0].append(sr_data[5][ev]-subruns[0][1]) #event time corrected
             sorted_run_data[4][1].append(sr_data[3][ev]) #mean charge
             sorted_run_data[4][2].append(sr_data[4][ev]) #charge std
             sorted_run_data[4][3].append(sr_data[1][ev]) #mean time
@@ -294,7 +306,7 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
             sorted_run_data[4][5].append(ev)#event id inside subrun
             sorted_run_data[4][6].append(subrun)# subrun id to make event id usable
             #again but for the subrun only
-            sorted_subrun[4][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[4][0].append(sr_data[5][ev]-subruns[-1][1]) #event time corrected
             sorted_subrun[4][1].append(sr_data[3][ev]) #mean charge
             sorted_subrun[4][2].append(sr_data[4][ev]) #charge std
             sorted_subrun[4][3].append(sr_data[1][ev]) #mean time
@@ -302,17 +314,18 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
             sorted_subrun[4][5].append(ev)#event id inside subrun
             sorted_subrun[4][6].append(subrun)# subrun id to make event id usable
             
-            if ev==0:
+            if len(sorted_run_data[4][7])==0: #if first event of type, time dt=0
                 sorted_run_data[4][7].append(0)
-                sorted_subrun[4][7].append(0)
-                 #if first event delta t=0
             else:
-                sorted_run_data[4][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
-                sorted_subrun[4][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+                sorted_run_data[4][7].append(sorted_run_data[4][0][-1]-sorted_run_data[4][0][-2]) #delta t
+            if len(sorted_subrun[4][7])==0: #if first event of type, time dt=0 for subrun
+                sorted_subrun[4][7].append(0)
+            else:
+                sorted_subrun[4][7].append(sorted_subrun[4][0][-1]-sorted_subrun[4][0][-2]) #delta t
           
         elif sr_data[3][ev]>cuts[4] and sr_data[3][ev]<cuts[5]:
             #actually just flashers now
-            sorted_run_data[2][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[2][0].append(sr_data[5][ev]-subruns[0][1]) #event time
             sorted_run_data[2][1].append(sr_data[3][ev]) #mean charge
             sorted_run_data[2][2].append(sr_data[4][ev]) #charge std
             sorted_run_data[2][3].append(sr_data[1][ev]) #mean time
@@ -321,24 +334,26 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
             sorted_run_data[2][6].append(subrun)# subrun id to make event id usable
 
             #again but for the subrun only
-            sorted_subrun[2][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[2][0].append(sr_data[5][ev]-subruns[-1][1]) #event time
             sorted_subrun[2][1].append(sr_data[3][ev]) #mean charge
             sorted_subrun[2][2].append(sr_data[4][ev]) #charge std
             sorted_subrun[2][3].append(sr_data[1][ev]) #mean time
             sorted_subrun[2][4].append(sr_data[2][ev]) #time std
             sorted_subrun[2][5].append(ev)#event id inside subrun
             sorted_subrun[2][6].append(subrun)# subrun id to make event id usable
-            if ev==0:
+            
+            if len(sorted_run_data[2][7])==0: #if first event of type, time dt=0
                 sorted_run_data[2][7].append(0)
-                sorted_subrun[2][7].append(0)
-                 #if first event delta t=0
             else:
-                sorted_run_data[2][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
-                sorted_subrun[2][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+                sorted_run_data[2][7].append(sorted_run_data[2][0][-1]-sorted_run_data[2][0][-2]) #delta t
+            if len(sorted_subrun[2][7])==0: #if first event of type, time dt=0 for subrun
+                sorted_subrun[2][7].append(0)
+            else:
+                sorted_subrun[2][7].append(sorted_subrun[2][0][-1]-sorted_subrun[2][0][-2]) #delta t
         else:
             #charge noise i guess we're still doing this
             confirmations[1].append(ev)
-            sorted_run_data[6][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[6][0].append(sr_data[5][ev]-subruns[0][1]) #event time
             sorted_run_data[6][1].append(sr_data[3][ev]) #mean charge
             sorted_run_data[6][2].append(sr_data[4][ev]) #charge std
             sorted_run_data[6][3].append(sr_data[1][ev]) #mean time
@@ -347,25 +362,27 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
             sorted_run_data[6][6].append(subrun)# subrun id to make event id usable
 
             #again but for the subrun only
-            sorted_subrun[6][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[6][0].append(sr_data[5][ev]-subruns[-1][1]) #event time
             sorted_subrun[6][1].append(sr_data[3][ev]) #mean charge
             sorted_subrun[6][2].append(sr_data[4][ev]) #charge std
             sorted_subrun[6][3].append(sr_data[1][ev]) #mean time
             sorted_subrun[6][4].append(sr_data[2][ev]) #time std
             sorted_subrun[6][5].append(ev)#event id inside subrun
             sorted_subrun[6][6].append(subrun)# subrun id to make event id usable
-            if ev==0:
+
+            if len(sorted_run_data[6][7])==0: #if first event of type, time dt=0
                 sorted_run_data[6][7].append(0)
-                sorted_subrun[6][7].append(0)
-                 #if first event delta t=0
             else:
-                sorted_run_data[6][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
-                sorted_subrun[6][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+                sorted_run_data[6][7].append(sorted_run_data[6][0][-1]-sorted_run_data[6][0][-2]) #delta t
+            if len(sorted_subrun[6][7])==0: #if first event of type, time dt=0 for subrun
+                sorted_subrun[6][7].append(0)
+            else:
+                sorted_subrun[6][7].append(sorted_subrun[6][0][-1]-sorted_subrun[6][0][-2]) #delta t
 
         if sr_data[3][ev]>cuts[0] and sr_data[3][ev]<cuts[1] and sr_data[2][ev]>cuts[8] and sr_data[2][ev]<cuts[9]:
             #time showers
             confirmations[2].append(ev)
-            sorted_run_data[5][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[5][0].append(sr_data[5][ev]-subruns[0][1]) #event time
             sorted_run_data[5][1].append(sr_data[3][ev]) #mean charge
             sorted_run_data[5][2].append(sr_data[4][ev]) #charge std
             sorted_run_data[5][3].append(sr_data[1][ev]) #mean time
@@ -374,20 +391,22 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
             sorted_run_data[5][6].append(subrun)# subrun id to make event id usable
 
             #again but for the subrun only
-            sorted_subrun[5][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[5][0].append(sr_data[5][ev]-subruns[-1][1]) #event time
             sorted_subrun[5][1].append(sr_data[3][ev]) #mean charge
             sorted_subrun[5][2].append(sr_data[4][ev]) #charge std
             sorted_subrun[5][3].append(sr_data[1][ev]) #mean time
             sorted_subrun[5][4].append(sr_data[2][ev]) #time std
             sorted_subrun[5][5].append(ev)#event id inside subrun
             sorted_subrun[5][6].append(subrun)# subrun id to make event id usable
-            if ev==0:
+
+            if len(sorted_run_data[5][7])==0: #if first event of type, time dt=0
                 sorted_run_data[5][7].append(0)
-                sorted_subrun[5][7].append(0)
-                 #if first event delta t=0
             else:
-                sorted_run_data[5][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
-                sorted_subrun[5][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+                sorted_run_data[5][7].append(sorted_run_data[5][0][-1]-sorted_run_data[5][0][-2]) #delta t
+            if len(sorted_subrun[5][7])==0: #if first event of type, time dt=0 for subrun
+                sorted_subrun[5][7].append(0)
+            else:
+                sorted_subrun[5][7].append(sorted_subrun[5][0][-1]-sorted_subrun[5][0][-2]) #delta t
 
         elif sr_data[3][ev]>cuts[4] and sr_data[3][ev]<cuts[5]:
             #don't gotta do anything :)
@@ -395,7 +414,7 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
         else: 
             #time noise
             confirmations[3].append(ev)
-            sorted_run_data[7][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[7][0].append(sr_data[5][ev]-subruns[0][1]) #event time
             sorted_run_data[7][1].append(sr_data[3][ev]) #mean charge
             sorted_run_data[7][2].append(sr_data[4][ev]) #charge std
             sorted_run_data[7][3].append(sr_data[1][ev]) #mean time
@@ -404,24 +423,26 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
             sorted_run_data[7][6].append(subrun)# subrun id to make event id usable
 
             #again but for the subrun only
-            sorted_subrun[7][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[7][0].append(sr_data[5][ev]-subruns[-1][1]) #event time
             sorted_subrun[7][1].append(sr_data[3][ev]) #mean charge
             sorted_subrun[7][2].append(sr_data[4][ev]) #charge std
             sorted_subrun[7][3].append(sr_data[1][ev]) #mean time
             sorted_subrun[7][4].append(sr_data[2][ev]) #time std
             sorted_subrun[7][5].append(ev)#event id inside subrun
             sorted_subrun[7][6].append(subrun)# subrun id to make event id usable
-            if ev==0:
-                sorted_run_data[7][7].append(0)
-                sorted_subrun[7][7].append(0)
-                #if first event delta t=0
-            else:
-                sorted_run_data[7][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
-                sorted_subrun[7][7].append(sr_data[5][ev]-sr_data[5][ev-1])
 
-        if sr_data[3][ev]>cuts[0] and sr_data[3][ev]<cuts[1] and sr_data[4][ev]>cuts[2] and sr_data[4][ev]<cuts[3]and sr_data[2][ev]>cuts[8] and sr_data[2][ev]<cuts[9]:
+            if len(sorted_run_data[7][7])==0: #if first event of type, time dt=0
+                sorted_run_data[7][7].append(0)
+            else:
+                sorted_run_data[7][7].append(sorted_run_data[7][0][-1]-sorted_run_data[7][0][-2]) #delta t
+            if len(sorted_subrun[7][7])==0: #if first event of type, time dt=0 for subrun
+                sorted_subrun[7][7].append(0)
+            else:
+                sorted_subrun[7][7].append(sorted_subrun[7][0][-1]-sorted_subrun[7][0][-2]) #delta t
+
+        if ev in confirmations[0] and confirmations[2]:
             #confirmed showers
-            sorted_run_data[1][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[1][0].append(sr_data[5][ev]-subruns[0][1]) #event time
             sorted_run_data[1][1].append(sr_data[3][ev]) #mean charge
             sorted_run_data[1][2].append(sr_data[4][ev]) #charge std
             sorted_run_data[1][3].append(sr_data[1][ev]) #mean time
@@ -430,24 +451,26 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
             sorted_run_data[1][6].append(subrun)# subrun id to make event id usable
 
             #again but for the subrun only
-            sorted_subrun[1][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[1][0].append(sr_data[5][ev]-subruns[-1][1]) #event time
             sorted_subrun[1][1].append(sr_data[3][ev]) #mean charge
             sorted_subrun[1][2].append(sr_data[4][ev]) #charge std
             sorted_subrun[1][3].append(sr_data[1][ev]) #mean time
             sorted_subrun[1][4].append(sr_data[2][ev]) #time std
             sorted_subrun[1][5].append(ev)#event id inside subrun
             sorted_subrun[1][6].append(subrun)# subrun id to make event id usable
-            if ev==0:
+
+            if len(sorted_run_data[1][7])==0: #if first event of type, time dt=0
                 sorted_run_data[1][7].append(0)
-                sorted_subrun[1][7].append(0)
-                #if first event delta t=0
             else:
-                sorted_run_data[1][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
-                sorted_subrun[1][7].append(sr_data[5][ev]-sr_data[5][ev-1])
+                sorted_run_data[1][7].append(sorted_run_data[1][0][-1]-sorted_run_data[1][0][-2]) #delta t
+            if len(sorted_subrun[1][7])==0: #if first event of type, time dt=0 for subrun
+                sorted_subrun[1][7].append(0)
+            else:
+                sorted_subrun[1][7].append(sorted_subrun[1][0][-1]-sorted_subrun[1][0][-2]) #delta t
         
         if ev in confirmations[1] and confirmations[3]:
             #confirmed noise
-            sorted_run_data[3][0].append(sr_data[5][ev]) #event time
+            sorted_run_data[3][0].append(sr_data[5][ev]-subruns[0][1]) #event time
             sorted_run_data[3][1].append(sr_data[3][ev]) #mean charge
             sorted_run_data[3][2].append(sr_data[4][ev]) #charge std
             sorted_run_data[3][3].append(sr_data[1][ev]) #mean time
@@ -456,21 +479,24 @@ def real_new_sort(sr_data,subrun, sorted_run_data, cuts): #new and shiny and bei
             sorted_run_data[3][6].append(subrun)# subrun id to make event id usable
 
             #again but for the subrun only
-            sorted_subrun[3][0].append(sr_data[5][ev]) #event time
+            sorted_subrun[3][0].append(sr_data[5][ev]-subruns[-1][1]) #event time
             sorted_subrun[3][1].append(sr_data[3][ev]) #mean charge
             sorted_subrun[3][2].append(sr_data[4][ev]) #charge std
             sorted_subrun[3][3].append(sr_data[1][ev]) #mean time
             sorted_subrun[3][4].append(sr_data[2][ev]) #time std
             sorted_subrun[3][5].append(ev)#event id inside subrun
             sorted_subrun[3][6].append(subrun)# subrun id to make event id usable
-            if ev==0:
-                sorted_run_data[3][7].append(0)
-                sorted_subrun[3][7].append(0)
-                #if first event delta t=0
-            else:
-                sorted_run_data[3][7].append(sr_data[5][ev]-sr_data[5][ev-1]) #delta t
-                sorted_subrun[3][7].append(sr_data[5][ev]-sr_data[5][ev-1])
 
+            if len(sorted_run_data[3][7])==0: #if first event of type, time dt=0
+                sorted_run_data[3][7].append(0)
+            else:
+                sorted_run_data[3][7].append(sorted_run_data[3][0][-1]-sorted_run_data[3][0][-2]) #delta t
+            if len(sorted_subrun[3][7])==0: #if first event of type, time dt=0 for subrun
+                sorted_subrun[3][7].append(0)
+            else:
+                sorted_subrun[3][7].append(sorted_subrun[3][0][-1]-sorted_subrun[3][0][-2]) #delta t
+
+   print(confirmations[4])
    return sorted_run_data, sorted_subrun
 
 #event rate histograms, being actively used
@@ -482,23 +508,25 @@ def event_rate_hists(current_sr, sorted_run_array, sorted_subrun_array, resoluti
     show_hist=np.histogram(sorted_run_array[1][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_array[1][0]))], bins = np.arange(sorted_run_array[1][0][0]/(time_step), sorted_run_array[1][0][-1]/(time_step), (1E9/time_step)/modifier))
     flash_hist=np.histogram(sorted_run_array[2][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_array[2][0]))], bins = np.arange(sorted_run_array[2][0][0]/(time_step), sorted_run_array[2][0][-1]/(time_step), (1E9/time_step)/modifier))
     other_hist=np.histogram(sorted_run_array[3][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_array[3][0]))], bins = np.arange(sorted_run_array[3][0][0]/(time_step), sorted_run_array[3][0][-1]/(time_step), (1E9/time_step)/modifier))
-    # chshow_hist=np.histogram(sorted_run_array[4][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_array[4][0]))], bins = np.arange(sorted_run_array[4][0][0]/(time_step), sorted_run_array[4][0][-1]/(time_step), (1E9/time_step)/modifier))
-    # tshow_hist=np.histogram(sorted_run_array[5][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_array[5][0]))], bins = np.arange(sorted_run_array[5][0][0]/(time_step), sorted_run_array[5][0][-1]/(time_step), (1E9/time_step)/modifier))
+    chshow_hist=np.histogram(sorted_run_array[4][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_array[4][0]))], bins = np.arange(sorted_run_array[4][0][0]/(time_step), sorted_run_array[4][0][-1]/(time_step), (1E9/time_step)/modifier))
+    tshow_hist=np.histogram(sorted_run_array[5][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_array[5][0]))], bins = np.arange(sorted_run_array[5][0][0]/(time_step), sorted_run_array[5][0][-1]/(time_step), (1E9/time_step)/modifier))
 
-    ax.errorbar(all_hist[1][:-1],all_hist[0],yerr=np.sqrt(all_hist[0]),fmt='o-', label = 'All')
-    ax.errorbar(show_hist[1][:-1],show_hist[0],yerr=np.sqrt(show_hist[0]),fmt='o-', label = 'Showers')
-    ax.errorbar(flash_hist[1][:-1],flash_hist[0],yerr=np.sqrt(flash_hist[0]),fmt='o-', label = 'Flashers')
-    ax.errorbar(other_hist[1][:-1],other_hist[0],yerr=np.sqrt(other_hist[0]),fmt='o-', label = 'Other')
+    ax.errorbar(all_hist[1][:-1],all_hist[0],yerr=np.sqrt(all_hist[0]), label = 'All', marker='o', markersize=3, linestyle='none')
+    ax.errorbar(show_hist[1][:-1],show_hist[0],yerr=np.sqrt(show_hist[0]), label = 'Showers', marker='o', markersize=3, linestyle='none')
+    ax.errorbar(flash_hist[1][:-1],flash_hist[0],yerr=np.sqrt(flash_hist[0]), label = 'Flashers', marker='o', markersize=3, linestyle='none')
+    ax.errorbar(other_hist[1][:-1],other_hist[0],yerr=np.sqrt(other_hist[0]), label = 'Other', marker='o', markersize=3, linestyle='none')
         
-    # if extra_lines==True:
-    #    ax.hist(chshow_hist[1][:-1],chshow_hist[0],yerr=np.sqrt(chshow_hist[0]),fmt='o-', label = 'Charge Showers') 
-    #    ax.hist(tshow_hist[1][:-1], tshow_hist[0], yerr=np.sqrt(tshow_hist[0]),fmt='o-', label = 'Time Showers') 
+    if extra_lines==True:
+       ax.errorbar(chshow_hist[1][:-1],chshow_hist[0],yerr=np.sqrt(chshow_hist[0]), label = 'Charge Showers', marker='o', markersize=3, linestyle='none') 
+       ax.errorbar(tshow_hist[1][:-1], tshow_hist[0], yerr=np.sqrt(tshow_hist[0]), label = 'Time Showers', marker='o', markersize=3, linestyle='none') 
 
-    ax.legend(loc='upper left')
-    ax.set_title(f"Event Rates Run {current_sr[0]}, Subruns 0-{current_sr[1]}")
-    ax.set_xlabel("Time [min]")
-    ax.set_ylabel("Rate [Hz]")
+    ax.legend(loc='upper left', fontsize=14)
+    ax.set_title(f"Event Rates Run {current_sr[0]}, Subruns 0-{current_sr[1]}", fontsize=14)
+    ax.set_xlabel("Time [min]", fontsize=14)
+    ax.set_ylabel("Rate [Hz]", fontsize=14)
     ax.set_yscale('log')
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     fig.savefig(f"{display_plots_path}event_rate_histogram.jpg")
     fig.savefig(f"{plots_save_path}run_{current_sr[0]}_event_rate_histogram.jpg")
     plt.close()
@@ -510,23 +538,25 @@ def event_rate_hists(current_sr, sorted_run_array, sorted_subrun_array, resoluti
         srshow_hist=np.histogram(sorted_subrun_array[1][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[1][0]))], bins = np.arange(sorted_subrun_array[1][0][0]/(time_step), sorted_subrun_array[1][0][-1]/(time_step), (1E9/time_step)/modifier))
         srflash_hist=np.histogram(sorted_subrun_array[2][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[2][0]))], bins = np.arange(sorted_subrun_array[2][0][0]/(time_step), sorted_subrun_array[2][0][-1]/(time_step), (1E9/time_step)/modifier))
         srother_hist=np.histogram(sorted_subrun_array[3][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[3][0]))], bins = np.arange(sorted_subrun_array[3][0][0]/(time_step), sorted_subrun_array[3][0][-1]/(time_step), (1E9/time_step)/modifier))
-        # srchshow_hist=np.histogram(sorted_subrun_array[4][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[4][0]))], bins = np.arange(sorted_subrun_array[4][0][0]/(time_step), sorted_subrun_array[4][0][-1]/(time_step), (1E9/time_step)/modifier))
-        # srtshow_hist=np.histogram(sorted_subrun_array[5][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[4][0]))], bins = np.arange(sorted_subrun_array[5][0][0]/(time_step), sorted_subrun_array[5][0][-1]/(time_step), (1E9/time_step)/modifier))
+        srchshow_hist=np.histogram(sorted_subrun_array[4][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[4][0]))], bins = np.arange(sorted_subrun_array[4][0][0]/(time_step), sorted_subrun_array[4][0][-1]/(time_step), (1E9/time_step)/modifier))
+        srtshow_hist=np.histogram(sorted_subrun_array[5][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[5][0]))], bins = np.arange(sorted_subrun_array[5][0][0]/(time_step), sorted_subrun_array[5][0][-1]/(time_step), (1E9/time_step)/modifier))
 
-        ax.errorbar(srall_hist[1][:-1],srall_hist[0],yerr=np.sqrt(srall_hist[0]),fmt='o-', label = 'All')
-        ax.errorbar(srshow_hist[1][:-1],srshow_hist[0],yerr=np.sqrt(srshow_hist[0]),fmt='o-', label = 'Showers')
-        ax.errorbar(srflash_hist[1][:-1],srflash_hist[0],yerr=np.sqrt(srflash_hist[0]),fmt='o-', label = 'Flashers')
-        ax.errorbar(srother_hist[1][:-1],srother_hist[0],yerr=np.sqrt(srother_hist[0]),fmt='o-', label = 'Other')
+        ax.errorbar(srall_hist[1][:-1],srall_hist[0],yerr=np.sqrt(srall_hist[0]), label = 'All', marker='o', markersize=3, linestyle='none')
+        ax.errorbar(srshow_hist[1][:-1],srshow_hist[0],yerr=np.sqrt(srshow_hist[0]), label = 'Showers', marker='o', markersize=3, linestyle='none')
+        ax.errorbar(srflash_hist[1][:-1],srflash_hist[0],yerr=np.sqrt(srflash_hist[0]), label = 'Flashers', marker='o', markersize=3, linestyle='none')
+        ax.errorbar(srother_hist[1][:-1],srother_hist[0],yerr=np.sqrt(srother_hist[0]), label = 'Other', marker='o', markersize=3, linestyle='none')
             
-        # if extra_lines==True:
-        #     ax.hist(srchshow_hist[1][:-1],srchshow_hist[0],yerr=np.sqrt(srchshow_hist[0]),fmt='o-', label = 'Charge Showers') 
-        #     ax.hist(srtshow_hist[1][:-1], srtshow_hist[0], yerr=np.sqrt(srtshow_hist[0]),fmt='o-', label = 'Time Showers')  
+        if extra_lines==True:
+            ax.errorbar(srchshow_hist[1][:-1],srchshow_hist[0],yerr=np.sqrt(srchshow_hist[0]), label = 'Charge Showers', marker='o', markersize=3, linestyle='none') 
+            ax.errorbar(srtshow_hist[1][:-1], srtshow_hist[0], yerr=np.sqrt(srtshow_hist[0]), label = 'Time Showers', marker='o', markersize=3, linestyle='none')  
     
-        ax.legend(loc='upper left')
-        ax.set_title(f"Event Rates Run {current_sr[0]}, Subrun {current_sr[1]}")
-        ax.set_xlabel("Time [min]")
-        ax.set_ylabel("Rate [Hz]")
+        ax.legend(loc='upper left', fontsize=14)
+        ax.set_title(f"Event Rates Run {current_sr[0]}, Subrun {current_sr[1]}", fontsize=14)
+        ax.set_xlabel("Time [min]", fontsize=14)
+        ax.set_ylabel("Rate [Hz]", fontsize=14)
         ax.set_yscale('log')
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
         fig.savefig(f"{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_event_rate.jpg")
         plt.close()
 
@@ -535,21 +565,71 @@ def delt_hists(current_sr, sorted_run_data, sorted_subrun, display_plots_path, p
     fig=plt.figure()
     ax=fig.add_subplot(111)
     ax.hist(sorted_run_data[0][7], bins = 200, log=True)
-    ax.set_title(f"time dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)")
-    ax.set_xlabel("time dt (ns)")
-    ax.set_ylabel("Counts")
+    ax.set_title(f"time dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=14)
+    ax.set_xlabel("time dt (ns)", fontsize=14)
+    ax.set_ylabel("Counts", fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     fig.savefig(f'{display_plots_path}time_dt_histogram.jpg')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_histogram.jpg')
+    plt.close()
+
+    fig=plt.figure()
+    ax=fig.add_subplot(111)
+    ax.hist(sorted_run_data[1][7], bins = 200, log=True)
+    ax.set_title(f"time dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Showers)", fontsize=14)
+    ax.set_xlabel("time dt (ns)", fontsize=14)
+    ax.set_ylabel("Counts", fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    fig.savefig(f'{display_plots_path}time_dt_shower_histogram.jpg')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_shower_histogram.jpg')
+    plt.close()
+
+    fig=plt.figure()
+    ax=fig.add_subplot(111)
+    ax.hist(sorted_run_data[2][7], bins = 200, log=True)
+    ax.set_title(f"time dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flashers)", fontsize=14)
+    ax.set_xlabel("time dt (ns)", fontsize=14)
+    ax.set_ylabel("Counts", fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    fig.savefig(f'{display_plots_path}time_dt_flasher_histogram.jpg')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_flasher_histogram.jpg')
     plt.close()
 
     if subrun_plots==True:
         fig=plt.figure()
         ax=fig.add_subplot(111)
         ax.hist(sorted_subrun[0][7], bins = 200, log=True)
-        ax.set_title(f"time dt, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)")
-        ax.set_xlabel("time dt (ns)")
-        ax.set_ylabel("Counts")
+        ax.set_title(f"time dt, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=14)
+        ax.set_xlabel("time dt (ns)", fontsize=14)
+        ax.set_ylabel("Counts", fontsize=14)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_histogram.jpg')
+        plt.close()
+
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+        ax.hist(sorted_subrun[1][7], bins = 200, log=True)
+        ax.set_title(f"time dt, Run {current_sr[0]}, Subrun {current_sr[1]} (Showers)", fontsize=14)
+        ax.set_xlabel("time dt (ns)", fontsize=14)
+        ax.set_ylabel("Counts", fontsize=14)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_shower_histogram.jpg')
+        plt.close()
+
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+        ax.hist(sorted_subrun[2][7], bins = 200, log=True)
+        ax.set_title(f"time dt, Run {current_sr[0]}, Subrun {current_sr[1]} (Flashers)", fontsize=14)
+        ax.set_xlabel("time dt (ns)", fontsize=14)
+        ax.set_ylabel("Counts", fontsize=14)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_flasher_histogram.jpg')
         plt.close()
 
 #2d histograms, being actively used
@@ -560,11 +640,13 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
 
    if boxes==True:
        ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[2]), width=(cuts[1]-cuts[0]), height=(cuts[3]-cuts[2]), linewidth=1, color='green', fill=False))
-       ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[6]), width=(cuts[5]-cuts[4]), height=(cuts[7]-cuts[6]), linewidth=1, color='red', fill=False))
+       ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[6]), width=(cuts[5]-cuts[4]), height=(cuts[7]-cuts[6]), linewidth=1, color='orange', fill=False))
 
-   ax.set_title(f"Charge std vs Mean Charge, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)")
-   ax.set_xlabel("Mean charge (ADC*ns)")
-   ax.set_ylabel("Charge std (ADC*ns)")
+   ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=14)
+   ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+   ax.set_ylabel("Charge std (ADC*ns)", fontsize=14)
+   plt.xticks(fontsize=14)
+   plt.yticks(fontsize=14)
    fig.savefig(f'{display_plots_path}charge_std_charge_mean_histogram.jpg')
    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_histogram.jpg')
    plt.close()
@@ -575,11 +657,13 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
 
    if boxes==True:
        ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[8]), width=(cuts[1]-cuts[0]), height=(cuts[9]-cuts[8]), linewidth=1, color='green', fill=False))
-       ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[10]), width=(cuts[5]-cuts[4]), height=(cuts[11]-cuts[10]), linewidth=1, color='red', fill=False))
+       ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[10]), width=(cuts[5]-cuts[4]), height=(cuts[11]-cuts[10]), linewidth=1, color='orange', fill=False))
 
-   ax.set_title(f"Time std vs Mean Charge, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)")
-   ax.set_xlabel("Mean charge (ADC*ns)")
-   ax.set_ylabel("Time std (ns)")
+   ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=14)
+   ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+   ax.set_ylabel("Time std (ns)", fontsize=14)
+   plt.xticks(fontsize=14)
+   plt.yticks(fontsize=14)
    fig.savefig(f'{display_plots_path}time_std_charge_mean_histogram.jpg')
    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_histogram.jpg')
    plt.close()
@@ -600,9 +684,11 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
       if boxes==True:
          ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[2]), width=(cuts[1]-cuts[0]), height=(cuts[3]-cuts[2]), linewidth=1, color='green', fill=False))
 
-      ax.set_title(f"Charge std vs Mean Charge, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)")
-      ax.set_xlabel("Mean charge (ADC*ns)")
-      ax.set_ylabel("Charge std (ADC*ns)")
+      ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=14)
+      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+      ax.set_ylabel("Charge std (ADC*ns)", fontsize=14)
+      plt.xticks(fontsize=14)
+      plt.yticks(fontsize=14)
       fig.savefig(f'{display_plots_path}charge_std_charge_mean_shower_region_histogram.jpg')
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_shower_region_histogram.jpg')
       plt.close()
@@ -614,9 +700,11 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
       if boxes==True:
          ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[8]), width=(cuts[1]-cuts[0]), height=(cuts[9]-cuts[8]), linewidth=1, color='green', fill=False))
 
-      ax.set_title(f"Time std vs Mean Charge, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)")
-      ax.set_xlabel("Mean charge (ADC*ns)")
-      ax.set_ylabel("Time std (ns)")
+      ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=14)
+      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+      ax.set_ylabel("Time std (ns)", fontsize=14)
+      plt.xticks(fontsize=14)
+      plt.yticks(fontsize=14)
       fig.savefig(f'{display_plots_path}time_std_charge_mean_shower_region_histogram.jpg')
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_shower_region_histogram.jpg')
       plt.close()
@@ -628,11 +716,13 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
       ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][2], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=[[cuts[4]-50,cuts[5]+50],[cuts[6]-50, cuts[7]+50]])
 
       if boxes==True:
-         ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[6]), width=(cuts[5]-cuts[4]), height=(cuts[7]-cuts[6]), linewidth=1, color='red', fill=False))
+         ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[6]), width=(cuts[5]-cuts[4]), height=(cuts[7]-cuts[6]), linewidth=1, color='orange', fill=False))
 
-      ax.set_title(f"Charge std vs Mean Charge, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)")
-      ax.set_xlabel("Mean charge (ADC*ns)")
-      ax.set_ylabel("Charge std (ADC*ns)")
+      ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)", fontsize=14)
+      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+      ax.set_ylabel("Charge std (ADC*ns)", fontsize=14)
+      plt.xticks(fontsize=14)
+      plt.yticks(fontsize=14)
       fig.savefig(f'{display_plots_path}charge_std_charge_mean_flasher_region_histogram.jpg')
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_flasher_region_histogram.jpg')
       plt.close()
@@ -642,11 +732,13 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
       ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][4], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=[[cuts[4]-50,cuts[5]+50],[cuts[10]-3,cuts[11]+3]])
 
       if boxes==True:
-         ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[10]), width=(cuts[5]-cuts[4]), height=(cuts[11]-cuts[10]), linewidth=1, color='red', fill=False))
+         ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[10]), width=(cuts[5]-cuts[4]), height=(cuts[11]-cuts[10]), linewidth=1, color='orange', fill=False))
 
-      ax.set_title(f"Time std vs Mean Charge, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)")
-      ax.set_xlabel("Mean charge (ADC*ns)")
-      ax.set_ylabel("Time std (ns)")
+      ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)", fontsize=14)
+      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+      ax.set_ylabel("Time std (ns)", fontsize=14)
+      plt.xticks(fontsize=14)
+      plt.yticks(fontsize=14)
       fig.savefig(f'{display_plots_path}time_std_charge_mean_flasher_region_histogram.jpg')
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_flasher_region_histogram.jpg')
       plt.close()
@@ -658,11 +750,13 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
 
       if boxes==True:
          ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[2]), width=(cuts[1]-cuts[0]), height=(cuts[3]-cuts[2]), linewidth=1, color='green', fill=False))
-         ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[6]), width=(cuts[5]-cuts[4]), height=(cuts[7]-cuts[6]), linewidth=1, color='red', fill=False))
+         ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[6]), width=(cuts[5]-cuts[4]), height=(cuts[7]-cuts[6]), linewidth=1, color='orange', fill=False))
 
-      ax.set_title(f"Charge std vs Mean Charge, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)")
-      ax.set_xlabel("Mean charge (ADC*ns)")
-      ax.set_ylabel("Charge std (ADC*ns)")
+      ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=14)
+      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+      ax.set_ylabel("Charge std (ADC*ns)", fontsize=14)
+      plt.xticks(fontsize=14)
+      plt.yticks(fontsize=14)
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_histogram.jpg')
       plt.close()
 
@@ -672,11 +766,13 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
 
       if boxes==True:
          ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[8]), width=(cuts[1]-cuts[0]), height=(cuts[9]-cuts[8]), linewidth=1, color='green', fill=False))
-         ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[10]), width=(cuts[5]-cuts[4]), height=(cuts[11]-cuts[10]), linewidth=1, color='red', fill=False))
+         ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[10]), width=(cuts[5]-cuts[4]), height=(cuts[11]-cuts[10]), linewidth=1, color='orange', fill=False))
 
-      ax.set_title(f"Time std vs Mean Charge, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)")
-      ax.set_xlabel("Mean charge (ADC*ns)")
-      ax.set_ylabel("Time std (ns)")
+      ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=14)
+      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+      ax.set_ylabel("Time std (ns)", fontsize=14)
+      plt.xticks(fontsize=14)
+      plt.yticks(fontsize=14)
       fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_histogram.jpg')
       plt.close()
 
@@ -696,9 +792,11 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
          if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[2]), width=(cuts[1]-cuts[0]), height=(cuts[3]-cuts[2]), linewidth=1, color='green', fill=False))
 
-         ax.set_title(f"Charge std vs Mean Charge, Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)")
-         ax.set_xlabel("Mean charge (ADC*ns)")
-         ax.set_ylabel("Charge std (ADC*ns)")
+         ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)", fontsize=14)
+         ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+         ax.set_ylabel("Charge std (ADC*ns)", fontsize=14)
+         plt.xticks(fontsize=14)
+         plt.yticks(fontsize=14)
          fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_shower_region_histogram.jpg')
          plt.close()
 
@@ -709,9 +807,11 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
          if boxes==True:
             ax.add_patch(patches.Rectangle(xy=(cuts[0],cuts[8]), width=(cuts[1]-cuts[0]), height=(cuts[9]-cuts[8]), linewidth=1, color='green', fill=False))
 
-         ax.set_title(f"Time std vs Mean Charge, Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)")
-         ax.set_xlabel("Mean charge (ADC*ns)")
-         ax.set_ylabel("Time std (ns)")
+         ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)", fontsize=14)
+         ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+         ax.set_ylabel("Time std (ns)", fontsize=14)
+         plt.xticks(fontsize=14)
+         plt.yticks(fontsize=14)
          fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_shower_region_histogram.jpg')
          plt.close()
          
@@ -722,11 +822,13 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
          ax.hist2d(sr_data[3], sr_data[4], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=[[cuts[4]-50,cuts[5]+50],[cuts[6]-50, cuts[7]+50]])
 
          if boxes==True:
-            ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[6]), width=(cuts[5]-cuts[4]), height=(cuts[7]-cuts[6]), linewidth=1, color='red', fill=False))
+            ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[6]), width=(cuts[5]-cuts[4]), height=(cuts[7]-cuts[6]), linewidth=1, color='orange', fill=False))
 
-         ax.set_title(f"Charge std vs Mean Charge, Run {current_sr[0]}, Subruns{current_sr[1]} (Flasher Region)")
-         ax.set_xlabel("Mean charge (ADC*ns)")
-         ax.set_ylabel("Charge std (ADC*ns)")
+         ax.set_title(f"Run {current_sr[0]}, Subruns{current_sr[1]} (Flasher Region)", fontsize=14)
+         ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+         ax.set_ylabel("Charge std (ADC*ns)", fontsize=14)
+         plt.xticks(fontsize=14)
+         plt.yticks(fontsize=14)
          fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_flasher_region_histogram.jpg')
          plt.close()
 
@@ -735,11 +837,13 @@ def sorting_hists_2d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
          ax.hist2d(sr_data[3], sr_data[2], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=[[cuts[4]-50,cuts[5]+50],[cuts[10]-3,cuts[11]+3]])
 
          if boxes==True:
-            ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[10]), width=(cuts[5]-cuts[4]), height=(cuts[11]-cuts[10]), linewidth=1, color='red', fill=False))
+            ax.add_patch(patches.Rectangle(xy=(cuts[4],cuts[10]), width=(cuts[5]-cuts[4]), height=(cuts[11]-cuts[10]), linewidth=1, color='orange', fill=False))
 
-         ax.set_title(f"Time std vs Mean Charge, Run {current_sr[0]}, Subrun {current_sr[1]} (Flasher Region)")
-         ax.set_xlabel("Mean charge (ADC*ns)")
-         ax.set_ylabel("Time std (ns)")
+         ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (Flasher Region)", fontsize=14)
+         ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+         ax.set_ylabel("Time std (ns)", fontsize=14)
+         plt.xticks(fontsize=14)
+         plt.yticks(fontsize=14)
          fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_flasher_region_histogram.jpg')
          plt.close()
 
@@ -751,11 +855,13 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
 
     if boxes==True:
         ax.add_patch(patches.Rectangle(xy=(cuts[0],0), width=(cuts[1]-cuts[0]), height=(1400), linewidth=1, color='green', fill=False))
-        ax.add_patch(patches.Rectangle(xy=(cuts[4],0), width=(cuts[5]-cuts[4]), height=(1400), linewidth=1, color='red', fill=False))
+        ax.add_patch(patches.Rectangle(xy=(cuts[4],0), width=(cuts[5]-cuts[4]), height=(1400), linewidth=1, color='orange', fill=False))
 
-    ax.set_title(f"Mean Charge, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)")
-    ax.set_xlabel("Mean charge (ADC*ns)")
-    ax.set_ylabel("Counts")
+    ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=14)
+    ax.set_xlabel("Mean charge (ADC*ns)", fontsize=14)
+    ax.set_ylabel("Counts", fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     fig.savefig(f'{display_plots_path}charge_mean_histogram.jpg')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_histogram.jpg')
     plt.close()
@@ -766,11 +872,13 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
 
     if boxes==True:
         ax.add_patch(patches.Rectangle(xy=(cuts[2],0), width=(cuts[3]-cuts[2]), height=(1400), linewidth=1, color='green', fill=False))
-        ax.add_patch(patches.Rectangle(xy=(cuts[6],0), width=(cuts[7]-cuts[6]), height=(1400), linewidth=1, color='red', fill=False))
+        ax.add_patch(patches.Rectangle(xy=(cuts[6],0), width=(cuts[7]-cuts[6]), height=(1400), linewidth=1, color='orange', fill=False))
 
-    ax.set_title(f"Charge Std, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)")
-    ax.set_xlabel("Charge Std (ADC*ns)")
-    ax.set_ylabel("Counts")
+    ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=14)
+    ax.set_xlabel("Charge Std (ADC*ns)", fontsize=14)
+    ax.set_ylabel("Counts", fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     fig.savefig(f'{display_plots_path}charge_std_histogram.jpg')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_histogram.jpg')
     plt.close()
@@ -778,9 +886,9 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
     fig=plt.figure()
     ax=fig.add_subplot(111)
     ax.hist(sorted_run_data[0][3], bins = 200, log=True)
-    ax.set_title(f"Mean Peak Time, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)")
-    ax.set_xlabel("Mean Peak Time (ns)")
-    ax.set_ylabel("Counts")
+    ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=14)
+    ax.set_xlabel("Mean Peak Time (ns)", fontsize=14)
+    ax.set_ylabel("Counts", fontsize=14)
     fig.savefig(f'{display_plots_path}time_mean_histogram.jpg')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_mean_histogram.jpg')
     plt.close()
@@ -791,11 +899,13 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
 
     if boxes==True:
         ax.add_patch(patches.Rectangle(xy=(cuts[8],0), width=(cuts[9]-cuts[8]), height=(1400), linewidth=1, color='green', fill=False))
-        ax.add_patch(patches.Rectangle(xy=(cuts[10],0), width=(cuts[11]-cuts[10]), height=(1400), linewidth=1, color='red', fill=False))
+        ax.add_patch(patches.Rectangle(xy=(cuts[10],0), width=(cuts[11]-cuts[10]), height=(1400), linewidth=1, color='orange', fill=False))
 
-    ax.set_title(f"Peak Time Std, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)")
-    ax.set_xlabel("Peak Time Std (ns)")
-    ax.set_ylabel("Counts")
+    ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=14)
+    ax.set_xlabel("Peak Time Std (ns)", fontsize=14)
+    ax.set_ylabel("Counts", fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     fig.savefig(f'{display_plots_path}time_std_histogram.jpg')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_histogram.jpg')
     plt.close()
@@ -803,42 +913,48 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
     if regions==True:
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sorted_run_data[0][1], bins = 200, log=True, range=(cuts[0]-50, cuts[1]+50))
+        ax.hist(sorted_run_data[0][1], bins = 200, log=True, range=(cuts[0]-50, cuts[0]+500))
 
         if boxes==True:
-            ax.add_patch(patches.Rectangle(xy=(cuts[0],0), width=(cuts[1]-cuts[0]), height=(1400), linewidth=1, color='green', fill=False))
+            ax.add_patch(patches.Rectangle(xy=(cuts[0],0), width=(500), height=(1400), linewidth=1, color='green', fill=False))
 
-        ax.set_title(f"Mean Charge, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)")
-        ax.set_xlabel("Mean Charge (ADC*ns)")
-        ax.set_ylabel("Counts")
+        ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=14)
+        ax.set_xlabel("Mean Charge (ADC*ns)", fontsize=14)
+        ax.set_ylabel("Counts", fontsize=14)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
         fig.savefig(f'{display_plots_path}charge_mean_shower_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_shower_region_histogram.jpg')
         plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sorted_run_data[0][2], bins = 200, log=True, range=(cuts[2]-50,cuts[3]+50))
+        ax.hist(sorted_run_data[0][2], bins = 200, log=True, range=(0,400))
 
         if boxes==True:
-            ax.add_patch(patches.Rectangle(xy=(cuts[2],0), width=(cuts[3]-cuts[2]), height=(1400), linewidth=1, color='green', fill=False))
+            ax.add_patch(patches.Rectangle(xy=(cuts[2],0), width=(400-cuts[2]), height=(1400), linewidth=1, color='green', fill=False))
 
-        ax.set_title(f"Charge Std, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)")
-        ax.set_xlabel("Charge Std (ADC*ns)")
-        ax.set_ylabel("Counts")
+        ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=14)
+        ax.set_xlabel("Charge Std (ADC*ns)", fontsize=14)
+        ax.set_ylabel("Counts", fontsize=14)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
         fig.savefig(f'{display_plots_path}charge_std_shower_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_shower_region_histogram.jpg')
         plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
-        ax.hist(sorted_run_data[0][4], bins = 200, log=True, range=(cuts[8]-3, cuts[9]+3))
+        ax.hist(sorted_run_data[0][4], bins = 200, log=True, range=(cuts[9]-3, cuts[9]+3))
 
         if boxes==True:
-            ax.add_patch(patches.Rectangle(xy=(cuts[8],0), width=(cuts[9]-cuts[8]), height=(1400), linewidth=1, color='green', fill=False))
+            ax.add_patch(patches.Rectangle(xy=(cuts[9]-3,0), width=(3), height=(1400), linewidth=1, color='green', fill=False))
 
-        ax.set_title(f"Peak Time Std, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)")
-        ax.set_xlabel("Peak Time Std (ns)")
-        ax.set_ylabel("Counts")
+        ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=14)
+        ax.set_xlabel("Peak Time Std (ns)", fontsize=14)
+        ax.set_ylabel("Counts", fontsize=14)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
         fig.savefig(f'{display_plots_path}time_std_shower_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_shower_region_histogram.jpg')
         plt.close()
@@ -849,11 +965,13 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.hist(sorted_run_data[0][1], bins = 200, log=True, range=(cuts[4]-50, cuts[5]+50))
 
         if boxes==True:
-            ax.add_patch(patches.Rectangle(xy=(cuts[4],0), width=(cuts[5]-cuts[4]), height=(1400), linewidth=1, color='red', fill=False))
+            ax.add_patch(patches.Rectangle(xy=(cuts[4],0), width=(cuts[5]-cuts[4]), height=(1400), linewidth=1, color='orange', fill=False))
 
-        ax.set_title(f"Mean Charge, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)")
-        ax.set_xlabel("Mean Charge (ADC*ns)")
-        ax.set_ylabel("Counts")
+        ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)", fontsize=14)
+        ax.set_xlabel("Mean Charge (ADC*ns)", fontsize=14)
+        ax.set_ylabel("Counts", fontsize=14)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
         fig.savefig(f'{display_plots_path}charge_mean_flasher_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_flasher_region_histogram.jpg')
         plt.close()
@@ -863,11 +981,13 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.hist(sorted_run_data[0][2], bins = 200, log=True, range=(cuts[6]-50,cuts[7]+50))
 
         if boxes==True:
-            ax.add_patch(patches.Rectangle(xy=(cuts[6],0), width=(cuts[7]-cuts[6]), height=(1400), linewidth=1, color='red', fill=False))
+            ax.add_patch(patches.Rectangle(xy=(cuts[6],0), width=(cuts[7]-cuts[6]), height=(1400), linewidth=1, color='orange', fill=False))
 
-        ax.set_title(f"Charge Std, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)")
-        ax.set_xlabel("Charge Std (ADC*ns)")
-        ax.set_ylabel("Counts")
+        ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)", fontsize=14)
+        ax.set_xlabel("Charge Std (ADC*ns)", fontsize=14)
+        ax.set_ylabel("Counts", fontsize=14)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
         fig.savefig(f'{display_plots_path}charge_std_flasher_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_flasher_region_histogram.jpg')
         plt.close()
@@ -877,11 +997,13 @@ def sorting_hists_1d(cuts, current_sr, sorted_run_data, sr_data, display_plots_p
         ax.hist(sorted_run_data[0][4], bins = 200, log=True, range=(cuts[10]-3, cuts[11]+3))
 
         if boxes==True:
-            ax.add_patch(patches.Rectangle(xy=(cuts[10],0), width=(cuts[11]-cuts[10]), height=(1400), linewidth=1, color='red', fill=False))
+            ax.add_patch(patches.Rectangle(xy=(cuts[10],0), width=(cuts[11]-cuts[10]), height=(1400), linewidth=1, color='orange', fill=False))
 
-        ax.set_title(f"Peak Time Std, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)")
-        ax.set_xlabel("Peak Time Std (ns)")
-        ax.set_ylabel("Counts")
+        ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)", fontsize=14)
+        ax.set_xlabel("Peak Time Std (ns)", fontsize=14)
+        ax.set_ylabel("Counts", fontsize=14)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
         fig.savefig(f'{display_plots_path}time_std_flasher_region_histogram.jpg')
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_flasher_region_histogram.jpg')
         plt.close()
@@ -1118,27 +1240,75 @@ def physical_summary(current_sr, run_data, physical_metrics_location, display_pl
            current[mod][2][sr]=mod
            current[mod][3][sr]=run_data[sr][5][0]
 
-    fig, (ax1,ax2,ax3,ax4)=plt.subplots(4,1)
-
+    fig, ax,=plt.subplots()
     for quad in range(modules*4):
-       ax1.plot(fpmTemps[quad][3]/(time_step), fpmTemps[quad][1])
-    ax1.set_ylabel("FPM Temp (C)")
-
-    for board in range(modules*2):
-       ax2.plot(feeTemps[board][3]/(time_step), feeTemps[board][1])
-    ax2.set_ylabel("FEE Temp (C)")
-
-    for mod in range(modules):
-       ax3.plot(hv[mod][3]/(time_step),hv[mod][1])
-       ax4.plot(current[mod][3]/(time_step),current[mod][1])
-    ax3.set_ylabel("HV (V)")
-    ax4.set_ylabel("Current (A)")
-    ax4.set_xlabel("Time (min)")
-    fig.tight_layout()
-    #fig.set_label(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]}, Physical Metrics") #should be a title for the thing, not currently working
-    fig.savefig(f'{display_plots_path}physical_metrics_plots.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_physical_metrics.jpg')
+       ax.plot(fpmTemps[quad][3]/(time_step), fpmTemps[quad][1])
+    ax.set_ylabel("FPM Temp (C)", fontsize=14)
+    ax.set_xlabel("Time(min)", fontsize=14)
+    ax.set_title('Environmental Metrics', fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    fig.savefig(f'{display_plots_path}FPM_temps_plot.jpg')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_FPM_temps_plot.jpg')
     plt.close()
+
+    fig, ax,=plt.subplots()
+    for board in range(modules*2):
+       ax.plot(feeTemps[board][3]/(time_step), feeTemps[board][1])
+    ax.set_ylabel("FEE Temp (C)", fontsize=14)
+    ax.set_xlabel("Time(min)", fontsize=14)
+    ax.set_title('Environmental Metrics', fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    fig.savefig(f'{display_plots_path}FEE_temps_plot.jpg')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_FEE_temps_plot.jpg')
+    plt.close()
+
+    fig, ax,=plt.subplots()
+    for mod in range(modules):
+       ax.plot(hv[mod][3]/(time_step),hv[mod][1])
+    ax.set_ylabel("HV (V)", fontsize=14)
+    ax.set_xlabel("Time(min)", fontsize=14)
+    ax.set_title('Environmental Metrics', fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    fig.savefig(f'{display_plots_path}HV_plot.jpg')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_HV_plot.jpg')
+    plt.close()
+
+    fig, ax,=plt.subplots()
+    for mod in range(modules):
+       ax.plot(current[mod][3]/(time_step),current[mod][1])
+    ax.set_ylabel("Current (A)", fontsize=14)
+    ax.set_xlabel("Time(min)", fontsize=14)
+    ax.set_title('Environmental Metrics', fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    fig.savefig(f'{display_plots_path}current_plot.jpg')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_current_plot.jpg')
+    plt.close()
+
+    # fig, (ax1,ax2,ax3,ax4)=plt.subplots(4,1) #version where they're all graphed together
+
+    # for quad in range(modules*4):
+    #    ax1.plot(fpmTemps[quad][3]/(time_step), fpmTemps[quad][1])
+    # ax1.set_ylabel("FPM Temp (C)")
+
+    # for board in range(modules*2):
+    #    ax2.plot(feeTemps[board][3]/(time_step), feeTemps[board][1])
+    # ax2.set_ylabel("FEE Temp (C)")
+
+    # for mod in range(modules):
+    #    ax3.plot(hv[mod][3]/(time_step),hv[mod][1])
+    #    ax4.plot(current[mod][3]/(time_step),current[mod][1])
+    # ax3.set_ylabel("HV (V)")
+    # ax4.set_ylabel("Current (A)")
+    # ax4.set_xlabel("Time (min)")
+    # fig.tight_layout()
+    # #fig.set_label(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]}, Physical Metrics") #should be a title for the thing, not currently working
+    # fig.savefig(f'{display_plots_path}physical_metrics_plots.jpg')
+    # fig.savefig(f'{plots_save_path}run_{current_sr[0]}_physical_metrics.jpg')
+    # plt.close()
     
 #CONDENSED FUNCTION, to be deleted
 
@@ -1324,7 +1494,7 @@ while monitoring==True:
         sorted_run_data=sorted_run_data_format
         runs.append(current_target[0])
     
-    subruns.append(current_target[1])
+    # subruns.append(current_target[1])
 
     print(f'\ndoing all the things and such for run {current_target[0]} subrun {current_target[1]}')
     
@@ -1340,7 +1510,7 @@ while monitoring==True:
     cuts=get_cuts() #get histogram cuts
     total_run_data.append(sr_data)#puts data for newest sr in the list for the whole run with shape [subrun][type of metric][event]
 
-    sort=real_new_sort(sr_data, current_target[1], sorted_run_data, cuts) #new sorting function it should spit out a nice big list with all relevant data
+    sort=real_new_sort(sr_data, current_target[1], sorted_run_data, cuts, subruns) #new sorting function it should spit out a nice big list with all relevant data
 
     sorted_run_data=sort[0]
     sorted_subrun=sort[1]
