@@ -15,7 +15,7 @@ new_r1_file_location='/data/user/fbivens5020/mock_data/'#folder where live monit
 old_r1_file_location=None #theoretically if you want it to use existing r1 files, option is currently broken
 physical_metrics_location='/data/user/fbivens5020/mock_data/'#"folder where temps currents etc are stored, assuming they're all together"
 modules=22 #the number of operable modules on the camera
-type_number=10 #relates to how how sorting works, don't touch this
+type_number=10 #relates to how how sorting works, don't touch this # no longer in use
 
 monitoring=True #run the loop
 live=True #is data being taken live, if true will detect the most recent run and start looking at the next run after that
