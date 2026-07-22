@@ -2,22 +2,14 @@ r0_file_location: /data/user/fbivens5020/mock_data/run{0}_subrun{1}_r0.tio
 pedestal_path: /data/wipac/CTA/targetcdata/run400032_pedestal.tcal
 r1_file_location: /data/user/fbivens5020/mock_data/run{0}_subrun{1}.r1
 current_file: /data/user/fbivens5020/mock_data/Current_FEEs_run{0}_subrun{1}.npy
-hv_file: /data/user/fbivens5020/mock_data/HV_FPMs_run{0}_subrun{0}.npy
+hv_file: /data/user/fbivens5020/mock_data/HV_FPMs_run{0}_subrun{1}.npy
 FEE_temp_file: /data/user/fbivens5020/mock_data/temperatures_FEEs_run{0}_subrun{1}.npy
 FPM_temp_file: /data/user/fbivens5020/mock_data/temperatures_FPMs_run{0}_subrun{1}.npy
-
-^file paths for files to fetch, r1 file is the location to save it to
-in the future there may be an option to use an existing r1 file
-
 modules: 22
 monitoring: True
-live: True
+live: False
 initial_run: 400215
 final_run: 400215
-
-^small options, number of modules present in the camera. if live is true initial subrun will be taken as latest subrun
-and the script will wait for the next run to appear. currently for live just set final subrun's run to some future run.
-
 histograms_1d: True
 histograms_2d: True
 histograms_dt: True
@@ -28,29 +20,19 @@ flasher_regions: True
 tight_windows: True
 bins: 400
 envelopes: True
-resolution: 3/50
+resolution: 0.06
 time_step: 60E9
-errors: true
+errors: True
 fontsize: 14
-
-^histogram and plotting options. bins, boxes, and region/window options apply to sorting 1d and 2d histograms. envelopes are for
-environmental metrics. resolution, time_step, and errors are for the event rate histogram, resolution is ratio of bins to seconds,
-currently 3/50 or 3 bins per subrun, time_step is the scale between ns and desired x-axis, and errors is whether error bars are shown,
-currently poisson errors being used. 
-
-mean_charge_shower_min: 40
-mean_charge_flasher_min: 2500
-std_charge_shower_min: 40
-std_charge_flasher_max: 800
-std_time_shower_max: 21
-
-^bounds for sorting method, see sorting histograms to adjust these, it should work to change between runs or subruns.
-I would reccomend picking the pedestal you plan to use and running the script on a small section of the run you're looking at, 
-or a recent run if you're doing live stuff, then tune these parameters to your satisfaction. it shouldn't have to be done too often
-but if there's a dip in the flasher rate and you have the time, checking the cuts should be a first step.
-
+charge_mean_flasher_min: 2500
+shower_intercept: 80
+FEE_temp_high: 40
+FEE_temp_low: 20
+FPM_temp_high: 40
+FPM_temp_low: 20
+current_high: 1
+current_low: 0
+hv_high: 40
+hv_low: 25
 display_plots_path: /data/user/fbivens5020/DQM_scripts/DQM_plots/display_plots/
 plots_save_path: /data/user/fbivens5020/DQM_scripts/DQM_plots/subrun_plots/
-
-^path for saving the plots that will be overwritten every subrun that show the progression of data. path for
-all plots that will be generated, which will be cumulative graphs for each run and stand-alone graphs for each subrun.
