@@ -1098,6 +1098,19 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
+        ax.hist(sorted_run_data[0][1], bins = bins, log=True, range=(flasher_min, flasher_min+1500))
+
+        ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)", fontsize=fontsize)
+        ax.set_xlabel("Mean Charge (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Counts", fontsize=fontsize)
+        plt.xticks(fontsize=fontsize)
+        plt.yticks(fontsize=fontsize)
+        fig.savefig(f'{display_plots_path}charge_mean_flasher_region_histogram.jpg')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_flasher_region_histogram.jpg')
+        plt.close()
+
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
         ax.hist(sorted_run_data[0][2], bins = bins, log=True, range=(0,400))
 
         ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=fontsize)
@@ -1261,7 +1274,7 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
 
 #OTHER METRICS FUNCTION in use
 
-def physical_summary(current_sr, subruns, config_dict):
+def environmental_summary(current_sr, subruns, config_dict):
     modules=int(config_dict["modules"])
     time_step=float(config_dict["time_step"])
     display_plots_path=config_dict["display_plots_path"]
@@ -1275,16 +1288,16 @@ def physical_summary(current_sr, subruns, config_dict):
 
     for sr in range(current_sr[1]+1):
 
-      fpmTemp_data=np.load(config_dict["FPM_temp_file"].format(current_sr[0], current_sr[1]))
+      fpmTemp_data=np.load(config_dict["FPM_temp_file"].format(current_sr[0], sr))
       fpmTemp_list.append(fpmTemp_data)
 
-      feeTemp_data=np.load(config_dict["FEE_temp_file"].format(current_sr[0], current_sr[1]))
+      feeTemp_data=np.load(config_dict["FEE_temp_file"].format(current_sr[0], sr))
       feeTemp_list.append(feeTemp_data)
 
-      hv_data=np.load(config_dict["hv_file"].format(current_sr[0], current_sr[1]))
+      hv_data=np.load(config_dict["hv_file"].format(current_sr[0], sr))
       hv_list.append(hv_data)
 
-      current_data=np.load(config_dict["current_file"].format(current_sr[0], current_sr[1]))
+      current_data=np.load(config_dict["current_file"].format(current_sr[0], sr))
       current_list.append(current_data)
 
     fpmTemps=np.zeros((modules*4,4,len(fpmTemp_list[:])))
@@ -1428,10 +1441,17 @@ while monitoring=="True":
     else:
         print(f'no r0 file for {current_target} found')
         ready=False
-        while ready==False:
+        set=False
+        while ready==False or set==False:
             ready=os.path.exists(config_dict["r0_file_location"].format(current_target[0],current_target[1]))
-        print('\nfile has been found')
-        continue
+            set=os.path.exists(config_dict["r0_file_location"].format(current_target[0]+1,0))
+        if ready==True:
+            print('\nfile has been found')
+            continue
+        if set==True:
+            print('\nnew run has been found')
+            current_target=[current_target[0]+1, 0]
+            continue
     
     if current_target[1]==0:
         subruns=[]
@@ -1442,7 +1462,7 @@ while monitoring=="True":
 
     print(f'\ndoing all the things and such for run {current_target[0]} subrun {current_target[1]}')
     
-    tim_n=time.time()
+    time_n=time.time()
 
     r0_file=config_dict["r0_file_location"].format(current_target[0],current_target[1])
     tcal_file=config_dict["pedestal_path"]
@@ -1461,7 +1481,7 @@ while monitoring=="True":
     for type in range(4):
         sorted_subrun_array.append(np.array(sorted_subrun[type]))
 
-    print(f'\nEvents: {len(sorted_subrun_array[0][0])}, showers: {len(sorted_subrun_array[1][0])}, flashers: {len(sorted_subrun_array[2][0])}, noise: {len(sorted_subrun_array[3][0])}')
+    print(f'\nEvents: {len(sorted_subrun_array[0][0])}, showers: {len(sorted_subrun_array[1][0])}, flashers: {len(sorted_subrun_array[2][0])}, other: {len(sorted_subrun_array[3][0])}')
 
     print(f'\nsorting the data took {time.time()-time_s} s')
         #event rate histograms here
@@ -1483,7 +1503,7 @@ while monitoring=="True":
 
     #physical metrics graph function
     time_p=time.time()
-    physical_summary(current_target, subruns, config_dict)
+    environmental_summary(current_target, subruns, config_dict)
     print(f'\n physical metrics took {time.time()-time_p} s\n')
     #'heat' maps/camera visualizations function here
 
@@ -1493,17 +1513,13 @@ while monitoring=="True":
         delt_hists(current_target, sorted_run_array, sorted_subrun_array, config_dict)
         print(f'\n time dt plots took {time.time()-time_p} s\n')
 
+    print(f'\nsummary of run {current_target[0]} subrun {current_target[1]} took {time.time()-time_n}s\n')
+
     print(f'\nruns covered: {runs}\nsubruns covered: {subruns}')
 
     if current_target==final_subrun:
         print('\nfinal subrun reached, ending monitoring')
         break
-
-    if os.path.exists(config_dict["r0_file_location"].format(current_target[0]+1,0)):
-        current_target[0]+=1
-        current_target[1]=0
-        print('\nnew run detected')
-        continue
 
     current_target[1]+=1
     print('\nrestarting loop')
