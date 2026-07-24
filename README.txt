@@ -16,29 +16,31 @@ FPM_temp_file: full path of the fpm temp .npys
 
 modules: number of modules currently installed in the camera
 
-monitoring: true/false, will the script do anything
+monitoring: 1=true/0=false, will the script do anything
 
-live: true/false, will change how initial run is taken to interpret it as latest run and start start monitoring waiting for intial run +1
+live: 1=true/0=false, will change how initial run is taken to interpret it as latest run and start start monitoring waiting for intial run +1
 
 initial_run: run monitoring should start looking for at subrun 0. should theoretically work to start looking at a run from the start even if a few subruns are already done
 
 final_run: end point, not currently particularly useful here. should stop running the script before looking at this run/ when this run starts.
 
-histograms_1d: true/false, will 1d histograms be generated
+histograms_1d: 1=true/0=false, will 1d histograms be generated
 
-histograms_2d: true/false, will 2d histograms be generated
+histograms_2d: 1=true/0=false, will 2d histograms be generated
 
-histograms_dt: true/falsewill dt histograms be generated
+histograms_dt: 1=true/0=false, will dt histograms be generated
 
-subrun_plots: true/false, will every plot generated cumulatively have a counterpart just within the subrun
+subrun_plots: 1=true/0=false, will every plot generated cumulatively have a counterpart just within the subrun
 
-boxes: true/false, will sorting lines be visible on plots, currently results in some annoying legends referring to nothing
+boxes: 1=true/0=false, will sorting lines be visible on plots, currently results in some annoying legends referring to nothing
 
-shower_regions: true/false, will plots be generated zoomed in on shower regions of relevant plots
+shower_regions: 1=true/0=false, will plots be generated zoomed in on shower regions of relevant plots
 
-flasher_regions: true/false, will plots be generated zoomed in on flasher regions of relevant plots
+flasher_regions: 1=true/0=false, will plots be generated zoomed in on flasher regions of relevant plots
 
-tight_windows: true/false, changes the window of shower zooms specifically to make them focus around the origin/weaker area rather than showing all showers. should be made obselete by log option at some point
+tight_windows: 1=true/0=false, changes the window of shower zooms specifically to make them focus around the origin/weaker area rather than showing all showers. should be made obselete by log option at some point
+
+logscale: plots 2d histograms again in log10 scale which provides more detail so it's nice
 
 bins: number of bins on the sorting histograms
 
@@ -46,7 +48,7 @@ resolution: how many bins on the event rate histogram per second. does have to b
 
 time_step: value to convert between ns and desired time scale, has to be an int
 
-errors: true/false, will error bars be plotted on the event rate histogram. they're poisson errors for now
+errors: 1=true/0=false, will error bars be plotted on the event rate histogram. they're poisson errors for now
 
 fontsize: fontsize on all text
 
@@ -54,7 +56,7 @@ charge_mean_flasher_min: minimum ADC*ns count to for an event to be a flasher
 
 shower_intercept: shower cut is diagonal, simple -x + b. set intercept here, it has to be an int
 
-envelopes: true/false, extra lines and an alert on the environmental metric plots for unwanted values. they have to be floats
+envelopes: 1=true/0=false, extra lines and an alert on the environmental metric plots for unwanted values. they have to be floats
 
 FEE_temp_high: value in C to be alerted if an FEE temperature passes above
 

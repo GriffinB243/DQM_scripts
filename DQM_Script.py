@@ -8,37 +8,7 @@ import matplotlib.patches as patches
 from numba import njit
 import time
 
-# #all options and changes listed here:
-# r0_file_location='/data/user/fbivens5020/mock_data/'#'folder where all the r0 files are'
-# pedestal_path='/data/wipac/CTA/targetcdata/run400032_pedestal.tcal'#'the chosen pedestal'
-# new_r1_file_location='/data/user/fbivens5020/mock_data/'#folder where live monitoring r1 files go'
-# old_r1_file_location=None #theoretically if you want it to use existing r1 files, option is currently broken
-# physical_metrics_location='/data/user/fbivens5020/mock_data/'#"folder where temps currents etc are stored, assuming they're all together"
-# modules=22 #the number of operable modules on the camera
-# type_number=10 #relates to how how sorting works, don't touch this # no longer in use
-
-# monitoring=False #run the loop
-# live=True #is data being taken live, if true will detect the most recent run and start looking at the next run after that
-# run_base=400214 #base for function that finds most recent run. only needs to be specific if there aren't any earlier runs in the file
-# initial_subrun=[400215,0] #first run and subrun to look at for existing data
-# final_subrun=[400215,15] #last subrun, can be used as a stopping point for live monitoring and looking at existing data
-
-# histograms_1d=True #true/false, will 1d histograms be generated at all
-# histograms_2d=True #true/false, will 2d histograms be generated at all
-# subrun_plots=True #true/false decides if plots will be generated and saved for all subruns as well (noncumulative)
-# boxes=True #true/false, will the cut boxes be visible on the histograms
-# noise_shower_regions=True #true/false, plots for the noise/shower region will be generated
-# flasher_regions=True #true/false, plots for flasher regions will be generated
-# tight_windows=True #true/false if false the region graphs look at the whole sorting box, if true they look at a tighter region for more detail between showers and flashers
-
-# extra_lines=False #true/false the lines for showers according to charge std and time std separately will be shown
-# resolution=1 #modifier on histogram bin sizes, 1 is a bin per second, 5 is a bin per fifth of a second, etc. it's set up to leave rate invariant
-# time_step=60E9 #modifier for the time scale, 60 billion is to take ns to min
-# fontsize=14
-
-# subrun_plots=True #true/false decides if versions of every graph are made for each subrun as well
-# display_plots_path="/data/user/fbivens5020/DQM_scripts/DQM_plots/display_plots/"# path to folder of display files, these are the ones being overwritten through the loop
-# plots_save_path= "/data/user/fbivens5020/DQM_scripts/DQM_plots/subrun_plots/" #place to save all generated plot files for each run and subrun
+plt.rcParams['figure.dpi'] = 300
 
 #config file loader
 def load_config(filepath):
@@ -141,6 +111,38 @@ def collect_stats(reader): #being actively used
 
 
     return all_wfs, stats_all[0], stats_all[1], stats_all[2], stats_all[3], timess
+
+# #all options and changes listed here:
+# r0_file_location='/data/user/fbivens5020/mock_data/'#'folder where all the r0 files are'
+# pedestal_path='/data/wipac/CTA/targetcdata/run400032_pedestal.tcal'#'the chosen pedestal'
+# new_r1_file_location='/data/user/fbivens5020/mock_data/'#folder where live monitoring r1 files go'
+# old_r1_file_location=None #theoretically if you want it to use existing r1 files, option is currently broken
+# physical_metrics_location='/data/user/fbivens5020/mock_data/'#"folder where temps currents etc are stored, assuming they're all together"
+# modules=22 #the number of operable modules on the camera
+# type_number=10 #relates to how how sorting works, don't touch this # no longer in use
+
+# monitoring=False #run the loop
+# live=True #is data being taken live, if true will detect the most recent run and start looking at the next run after that
+# run_base=400214 #base for function that finds most recent run. only needs to be specific if there aren't any earlier runs in the file
+# initial_subrun=[400215,0] #first run and subrun to look at for existing data
+# final_subrun=[400215,15] #last subrun, can be used as a stopping point for live monitoring and looking at existing data
+
+# histograms_1d=True #true/false, will 1d histograms be generated at all
+# histograms_2d=True #true/false, will 2d histograms be generated at all
+# subrun_plots=True #true/false decides if plots will be generated and saved for all subruns as well (noncumulative)
+# boxes=True #true/false, will the cut boxes be visible on the histograms
+# noise_shower_regions=True #true/false, plots for the noise/shower region will be generated
+# flasher_regions=True #true/false, plots for flasher regions will be generated
+# tight_windows=True #true/false if false the region graphs look at the whole sorting box, if true they look at a tighter region for more detail between showers and flashers
+
+# extra_lines=False #true/false the lines for showers according to charge std and time std separately will be shown
+# resolution=1 #modifier on histogram bin sizes, 1 is a bin per second, 5 is a bin per fifth of a second, etc. it's set up to leave rate invariant
+# time_step=60E9 #modifier for the time scale, 60 billion is to take ns to min
+# fontsize=14
+
+# subrun_plots=True #true/false decides if versions of every graph are made for each subrun as well
+# display_plots_path="/data/user/fbivens5020/DQM_scripts/DQM_plots/display_plots/"# path to folder of display files, these are the ones being overwritten through the loop
+# plots_save_path= "/data/user/fbivens5020/DQM_scripts/DQM_plots/subrun_plots/" #place to save all generated plot files for each run and subrun
 
 #returns the sr_data object which is sr[0]: all wfs, sr[1]: mean time, sr[1][ev]: mean time for an event, sr[2]: time std
 #sr[3]: charge mean, sr[4]: charge std, sr[5]: event time
@@ -544,8 +546,8 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
         sorted_subrun[0][6].append(subrun)# subrun id to make event id usable
 
         if event==0:
-            sorted_run_data[0][7].append(0) #set first dt to zero
-            sorted_subrun[0][7].append(0) #set first dt of subrun to 0
+            sorted_run_data[0][7].append(np.nan) #set first dt to zero
+            sorted_subrun[0][7].append(np.nan) #set first dt of subrun to 0
         else:
             sorted_run_data[0][7].append(sr_data[5][event]-sr_data[5][event-1]) #set dt
             sorted_subrun[0][7].append(sr_data[5][event]-sr_data[5][event-1]) #set dt for subrun
@@ -569,8 +571,8 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
             sorted_subrun[2][6].append(subrun)# subrun id to make event id usable
 
             if len(sorted_subrun[2][7])==0:
-                sorted_run_data[2][7].append(0)
-                sorted_subrun[2][7].append(0)
+                sorted_run_data[2][7].append(np.nan)
+                sorted_subrun[2][7].append(np.nan)
             else:
                 sorted_run_data[2][7].append(sorted_run_data[2][0][-1]-sorted_run_data[2][0][-2])
                 sorted_subrun[2][7].append(sorted_subrun[2][0][-1]-sorted_subrun[2][0][-2])
@@ -594,8 +596,8 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
             sorted_subrun[1][6].append(subrun)# subrun id to make event id usable
 
             if len(sorted_subrun[1][7])==0:
-                sorted_run_data[1][7].append(0)
-                sorted_subrun[1][7].append(0)
+                sorted_run_data[1][7].append(np.nan)
+                sorted_subrun[1][7].append(np.nan)
             else:
                 sorted_run_data[1][7].append(sorted_run_data[1][0][-1]-sorted_run_data[1][0][-2])
                 sorted_subrun[1][7].append(sorted_subrun[1][0][-1]-sorted_subrun[1][0][-2])
@@ -619,8 +621,8 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
             sorted_subrun[3][6].append(subrun)# subrun id to make event id usable
 
             if len(sorted_subrun[3][7])==0:
-                sorted_run_data[3][7].append(0)
-                sorted_subrun[3][7].append(0)
+                sorted_run_data[3][7].append(np.nan)
+                sorted_subrun[3][7].append(np.nan)
             else:
                 sorted_run_data[3][7].append(sorted_run_data[3][0][-1]-sorted_run_data[3][0][-2])
                 sorted_subrun[3][7].append(sorted_subrun[3][0][-1]-sorted_subrun[3][0][-2])
@@ -634,9 +636,9 @@ def event_rate_hists(current_sr, sorted_run_array, sorted_subrun_array, config_d
     time_step=float(config_dict["time_step"])
     display_plots_path=config_dict["display_plots_path"]
     plots_save_path=config_dict["plots_save_path"]
-    subrun_plots=config_dict["subrun_plots"]
+    subrun_plots=bool(int(config_dict["subrun_plots"]))
     fontsize=int(config_dict["fontsize"])
-    errors=config_dict["errors"]
+    errors=bool(int(config_dict["errors"]))
 
     fig, ax = plt.subplots()
     all_hist=np.histogram(sorted_run_array[0][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_array[0][0]))], bins = np.arange(sorted_run_data[0][0][0]/(time_step), sorted_run_data[0][0][-1]/(time_step), (1E9/time_step)/modifier))
@@ -644,7 +646,7 @@ def event_rate_hists(current_sr, sorted_run_array, sorted_subrun_array, config_d
     flash_hist=np.histogram(sorted_run_array[2][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_array[2][0]))], bins = np.arange(sorted_run_array[2][0][0]/(time_step), sorted_run_array[2][0][-1]/(time_step), (1E9/time_step)/modifier))
     other_hist=np.histogram(sorted_run_array[3][0]/(time_step), weights = [modifier for _ in range(len(sorted_run_array[3][0]))], bins = np.arange(sorted_run_array[3][0][0]/(time_step), sorted_run_array[3][0][-1]/(time_step), (1E9/time_step)/modifier))
 
-    if errors=="True":
+    if errors==True:
         ax.errorbar(all_hist[1][:-1],all_hist[0],yerr=np.sqrt(all_hist[0]), label = 'All', marker='o', markersize=3, linestyle='none')
         ax.errorbar(show_hist[1][:-1],show_hist[0],yerr=np.sqrt(show_hist[0]), label = 'Showers', marker='o', markersize=3, linestyle='none')
         ax.errorbar(flash_hist[1][:-1],flash_hist[0],yerr=np.sqrt(flash_hist[0]), label = 'Flashers', marker='o', markersize=3, linestyle='none')
@@ -656,138 +658,155 @@ def event_rate_hists(current_sr, sorted_run_array, sorted_subrun_array, config_d
         ax.errorbar(other_hist[1][:-1],other_hist[0], label = 'Other', marker='o', markersize=3, linestyle='none')
 
     ax.legend(loc='upper left', fontsize=fontsize)
-    ax.set_title(f"Event Rates Run {current_sr[0]}, Subruns 0-{current_sr[1]}", fontsize=fontsize)
+    ax.set_title(f"Event Rates, Run {current_sr[0]}, Subruns 0-{current_sr[1]}", fontsize=fontsize)
     ax.set_xlabel("Time [min]", fontsize=fontsize)
     ax.set_ylabel("Rate [Hz]", fontsize=fontsize)
     ax.set_yscale('log')
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f"{display_plots_path}event_rate_histogram.jpg")
-    fig.savefig(f"{plots_save_path}run_{current_sr[0]}_event_rate_histogram.jpg")
+    fig.savefig(f"{display_plots_path}event_rate_histogram.jpg", bbox_inches='tight')
+    fig.savefig(f"{plots_save_path}run_{current_sr[0]}_event_rate_histogram.jpg", bbox_inches='tight')
     plt.close()
     
-    if subrun_plots=="True":
-
+    if subrun_plots==True:
+        sr_modifier=1/5 #lock subrun plots as having 10 data points per 50 seconds. will make it so freakishly short subruns have no points
         fig, ax = plt.subplots()
-        srall_hist=np.histogram(sorted_subrun_array[0][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[0][0]))], bins = np.arange(sorted_subrun_array[0][0][0]/(time_step), sorted_subrun_array[0][0][-1]/(time_step), (1E9/time_step)/modifier))
-        srshow_hist=np.histogram(sorted_subrun_array[1][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[1][0]))], bins = np.arange(sorted_subrun_array[1][0][0]/(time_step), sorted_subrun_array[1][0][-1]/(time_step), (1E9/time_step)/modifier))
-        srflash_hist=np.histogram(sorted_subrun_array[2][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[2][0]))], bins = np.arange(sorted_subrun_array[2][0][0]/(time_step), sorted_subrun_array[2][0][-1]/(time_step), (1E9/time_step)/modifier))
-        srother_hist=np.histogram(sorted_subrun_array[3][0]/(time_step), weights = [modifier for _ in range(len(sorted_subrun_array[3][0]))], bins = np.arange(sorted_subrun_array[3][0][0]/(time_step), sorted_subrun_array[3][0][-1]/(time_step), (1E9/time_step)/modifier))
+        srall_hist=np.histogram(sorted_subrun_array[0][0]/(time_step), weights = [sr_modifier for _ in range(len(sorted_subrun_array[0][0]))], bins = np.arange(sorted_subrun_array[0][0][0]/(time_step), sorted_subrun_array[0][0][-1]/(time_step), (1E9/time_step)/sr_modifier))
+        srshow_hist=np.histogram(sorted_subrun_array[1][0]/(time_step), weights = [sr_modifier for _ in range(len(sorted_subrun_array[1][0]))], bins = np.arange(sorted_subrun_array[1][0][0]/(time_step), sorted_subrun_array[1][0][-1]/(time_step), (1E9/time_step)/sr_modifier))
+        srflash_hist=np.histogram(sorted_subrun_array[2][0]/(time_step), weights = [sr_modifier for _ in range(len(sorted_subrun_array[2][0]))], bins = np.arange(sorted_subrun_array[2][0][0]/(time_step), sorted_subrun_array[2][0][-1]/(time_step), (1E9/time_step)/sr_modifier))
+        srother_hist=np.histogram(sorted_subrun_array[3][0]/(time_step), weights = [sr_modifier for _ in range(len(sorted_subrun_array[3][0]))], bins = np.arange(sorted_subrun_array[3][0][0]/(time_step), sorted_subrun_array[3][0][-1]/(time_step), (1E9/time_step)/sr_modifier))
 
-        ax.errorbar(srall_hist[1][:-1],srall_hist[0],yerr=np.sqrt(srall_hist[0]), label = 'All', marker='o', markersize=3, linestyle='none')
-        ax.errorbar(srshow_hist[1][:-1],srshow_hist[0],yerr=np.sqrt(srshow_hist[0]), label = 'Showers', marker='o', markersize=3, linestyle='none')
-        ax.errorbar(srflash_hist[1][:-1],srflash_hist[0],yerr=np.sqrt(srflash_hist[0]), label = 'Flashers', marker='o', markersize=3, linestyle='none')
-        ax.errorbar(srother_hist[1][:-1],srother_hist[0],yerr=np.sqrt(srother_hist[0]), label = 'Other', marker='o', markersize=3, linestyle='none')
-            
+        if errors==True:
+            ax.errorbar(srall_hist[1][:-1],srall_hist[0],yerr=np.sqrt(srall_hist[0]), label = 'All', marker='o', markersize=3, linestyle='none')
+            ax.errorbar(srshow_hist[1][:-1],srshow_hist[0],yerr=np.sqrt(srshow_hist[0]), label = 'Showers', marker='o', markersize=3, linestyle='none')
+            ax.errorbar(srflash_hist[1][:-1],srflash_hist[0],yerr=np.sqrt(srflash_hist[0]), label = 'Flashers', marker='o', markersize=3, linestyle='none')
+            ax.errorbar(srother_hist[1][:-1],srother_hist[0],yerr=np.sqrt(srother_hist[0]), label = 'Other', marker='o', markersize=3, linestyle='none')
+        else:
+            ax.errorbar(srall_hist[1][:-1],srall_hist[0], label = 'All', marker='o', markersize=3, linestyle='none')
+            ax.errorbar(srshow_hist[1][:-1],srshow_hist[0], label = 'Showers', marker='o', markersize=3, linestyle='none')
+            ax.errorbar(srflash_hist[1][:-1],srflash_hist[0], label = 'Flashers', marker='o', markersize=3, linestyle='none')
+            ax.errorbar(srother_hist[1][:-1],srother_hist[0], label = 'Other', marker='o', markersize=3, linestyle='none')
+
         ax.legend(loc='upper left', fontsize=fontsize)
-        ax.set_title(f"Event Rates Run {current_sr[0]}, Subrun {current_sr[1]}", fontsize=fontsize)
+        ax.set_title(f"Event Rates, Run {current_sr[0]}, Subrun {current_sr[1]}", fontsize=fontsize)
         ax.set_xlabel("Time [min]", fontsize=fontsize)
         ax.set_ylabel("Rate [Hz]", fontsize=fontsize)
         ax.set_yscale('log')
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f"{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_event_rate.jpg")
+        fig.savefig(f"{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_event_rate.jpg", bbox_inches='tight')
         plt.close()
 
 #time dt histograms
 def delt_hists(current_sr, sorted_run_data, sorted_subrun, config_dict):
     display_plots_path=config_dict["display_plots_path"]
     plots_save_path=config_dict["plots_save_path"]
-    subrun_plots=config_dict["subrun_plots"]
+    subrun_plots=bool(int(config_dict["subrun_plots"]))
     fontsize=int(config_dict["fontsize"])
     bins=int(config_dict["bins"])
 
     fig=plt.figure()
     ax=fig.add_subplot(111)
     ax.hist(sorted_run_data[0][7], bins = bins, log=True)
-    ax.set_title(f"time dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-    ax.set_xlabel("time dt (ns)", fontsize=fontsize)
-    ax.set_ylabel("Counts", fontsize=fontsize)
+    ax.set_title(f"dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
+    ax.set_xlabel("dt (ns)", fontsize=fontsize)
+    ax.set_ylabel("Number of Events", fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}time_dt_histogram.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_histogram.jpg')
+    fig.savefig(f'{display_plots_path}time_dt_histogram.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_histogram.jpg', bbox_inches='tight')
     plt.close()
 
     fig=plt.figure()
     ax=fig.add_subplot(111)
-    ax.hist(sorted_run_data[0][7], bins = bins, log=True, range=(0,2E5))
-    ax.set_title(f"time dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-    ax.set_xlabel("time dt (ns)", fontsize=fontsize)
-    ax.set_ylabel("Counts", fontsize=fontsize)
+    ax.hist(sorted_run_data[0][7], bins = bins, log=True, range=(0,5E5))
+    ax.set_title(f"dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
+    ax.set_xlabel("dt (ns)", fontsize=fontsize)
+    ax.set_ylabel("Number of Events", fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}time_dt_histogram.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_quick_histogram.jpg')
+    fig.savefig(f'{display_plots_path}time_dt_origin_histogram.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_origin_histogram.jpg', bbox_inches='tight')
     plt.close()
 
     fig=plt.figure()
     ax=fig.add_subplot(111)
     ax.hist(sorted_run_data[1][7], bins = bins, log=True)
-    ax.set_title(f"time dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Showers)", fontsize=fontsize)
-    ax.set_xlabel("time dt (ns)", fontsize=fontsize)
-    ax.set_ylabel("Counts", fontsize=fontsize)
+    ax.set_title(f"dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Showers)", fontsize=fontsize)
+    ax.set_xlabel("dt (ns)", fontsize=fontsize)
+    ax.set_ylabel("Number of Events", fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}time_dt_shower_histogram.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_shower_histogram.jpg')
+    fig.savefig(f'{display_plots_path}time_dt_shower_histogram.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_shower_histogram.jpg', bbox_inches='tight')
     plt.close()
 
     fig=plt.figure()
     ax=fig.add_subplot(111)
     ax.hist(sorted_run_data[2][7], bins = bins, log=True)
-    ax.set_title(f"time dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flashers)", fontsize=fontsize)
-    ax.set_xlabel("time dt (ns)", fontsize=fontsize)
-    ax.set_ylabel("Counts", fontsize=fontsize)
+    ax.set_title(f"dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flashers)", fontsize=fontsize)
+    ax.set_xlabel("dt (ns)", fontsize=fontsize)
+    ax.set_ylabel("Number of Events", fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}time_dt_flasher_histogram.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_flasher_histogram.jpg')
+    fig.savefig(f'{display_plots_path}time_dt_flasher_histogram.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_flasher_histogram.jpg', bbox_inches='tight')
     plt.close()
 
-    if subrun_plots=="True":
+    if subrun_plots==True:
         fig=plt.figure()
         ax=fig.add_subplot(111)
         ax.hist(sorted_subrun[0][7], bins = bins, log=True)
-        ax.set_title(f"time dt, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
-        ax.set_xlabel("time dt (ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_title(f"dt, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
+        ax.set_xlabel("dt (ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_histogram.jpg')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_histogram.jpg', bbox_inches='tight')
+        plt.close()
+
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+        ax.hist(sorted_subrun[0][7], bins = bins, log=True, range=(0,5E5))
+        ax.set_title(f"dt, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
+        ax.set_xlabel("dt (ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
+        plt.xticks(fontsize=fontsize)
+        plt.yticks(fontsize=fontsize)
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_origin_histogram.jpg', bbox_inches='tight')
         plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
         ax.hist(sorted_subrun[1][7], bins = bins, log=True)
-        ax.set_title(f"time dt, Run {current_sr[0]}, Subrun {current_sr[1]} (Showers)", fontsize=fontsize)
-        ax.set_xlabel("time dt (ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_title(f"dt, Run {current_sr[0]}, Subrun {current_sr[1]} (Showers)", fontsize=fontsize)
+        ax.set_xlabel("dt (ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_shower_histogram.jpg')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_shower_histogram.jpg', bbox_inches='tight')
         plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
         ax.hist(sorted_subrun[2][7], bins = bins, log=True)
-        ax.set_title(f"time dt, Run {current_sr[0]}, Subrun {current_sr[1]} (Flashers)", fontsize=fontsize)
-        ax.set_xlabel("time dt (ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_title(f"dt, Run {current_sr[0]}, Subrun {current_sr[1]} (Flashers)", fontsize=fontsize)
+        ax.set_xlabel("dt (ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_flasher_histogram.jpg')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_flasher_histogram.jpg', bbox_inches='tight')
         plt.close()
 
 #2d histograms, being actively used
 def sorting_hists_2d(current_sr, sorted_run_data, sr_data, config_dict):
    display_plots_path=config_dict["display_plots_path"]
    plots_save_path=config_dict["plots_save_path"]
-   subrun_plots=config_dict["subrun_plots"]
-   boxes=config_dict["boxes"]
-   regions=config_dict["shower_regions"]
-   flashers=config_dict["flasher_regions"]
-   tight=config_dict["tight_windows"]
+   subrun_plots=bool(int(config_dict["subrun_plots"]))
+   boxes=bool(int(config_dict["boxes"]))
+   regions=bool(int(config_dict["shower_regions"]))
+   flashers=bool(int(config_dict["flasher_regions"]))
+   logscale=bool(int(config_dict["logscale"]))
    fontsize=int(config_dict["fontsize"])
    bins=int(config_dict["bins"])
    flasher_min=int(config_dict["charge_mean_flasher_min"])
@@ -795,227 +814,311 @@ def sorting_hists_2d(current_sr, sorted_run_data, sr_data, config_dict):
    xbounds=[(-40), shower_intercept]
    ybounds=[(40+shower_intercept),0]
 
+
    fig=plt.figure()
    ax=fig.add_subplot(111)
    ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][2], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
 
-   if boxes=="True":
+   if boxes==True:
       ax.vlines(flasher_min,0,1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
       ax.plot(xbounds, ybounds, color='green', label='Shower Cut')
       ax.legend(loc='upper right', fontsize=fontsize)
 
 
    ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-   ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-   ax.set_ylabel("Charge std (ADC*ns)", fontsize=fontsize)
+   ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+   ax.set_ylabel("Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
    plt.xticks(fontsize=fontsize)
    plt.yticks(fontsize=fontsize)
-   fig.savefig(f'{display_plots_path}charge_std_charge_mean_histogram.jpg')
-   fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_histogram.jpg')
+   fig.savefig(f'{display_plots_path}charge_std_charge_mean_histogram.jpg',bbox_inches='tight')
+   fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_histogram.jpg',bbox_inches='tight')
    plt.close()
 
    fig=plt.figure()
    ax=fig.add_subplot(111)
    ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][4], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
 
-   if boxes=="True":
+   if boxes==True:
       ax.vlines(flasher_min,0,30, colors='orange', linestyle='dashed', label='Flasher Cut')
       ax.legend(loc='upper right', fontsize=fontsize)
 
    ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-   ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-   ax.set_ylabel("Time std (ns)", fontsize=fontsize)
+   ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+   ax.set_ylabel("Peak Time Standard Deviation (ns)", fontsize=fontsize)
    plt.xticks(fontsize=fontsize)
    plt.yticks(fontsize=fontsize)
-   fig.savefig(f'{display_plots_path}time_std_charge_mean_histogram.jpg')
-   fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_histogram.jpg')
+   fig.savefig(f'{display_plots_path}time_std_charge_mean_histogram.jpg', bbox_inches='tight')
+   fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_histogram.jpg', bbox_inches='tight')
    plt.close()
 
-   if regions=="True":
-      
-      if tight=="True":
-         charge_window=[[-40,140],[0,140]]
-         time_window=[[-40, 140],[16, 28]]
-      else:
-         charge_window=[[-40, flasher_min],[0, 2300]]
-         time_window=[[-40, flasher_min],[13, 28]]
+   if logscale==True:
+       
+      charge_mean_log=np.log10(sorted_run_data[0][1])
+      charge_std_log=np.log10(sorted_run_data[0][2])
+      time_std_log=np.log10(sorted_run_data[0][4])
+
+      xline=np.arange(1,shower_intercept,(shower_intercept/10))
+      yline=(xline*(-1))+shower_intercept
+
+      fig=plt.figure()
+      ax=fig.add_subplot(111)
+
+      ax.hist2d(charge_mean_log, charge_std_log, bins=bins, range=[[0, np.nanmax(charge_mean_log)+0.5],[np.nanmin(charge_std_log)-0.5, np.nanmax(charge_std_log)+0.5]], cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
+
+      if boxes==True:
+        ax.vlines(np.log10(flasher_min),0, np.nanmax(charge_std_log)+0.5, linestyle='dashed', colors='orange', label='Flasher Cut')
+        ax.plot(np.log10(xline),np.log10(yline), color='green', label='Shower Cut')
+        ax.legend(loc='lower right',fontsize=fontsize)
+
+      ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
+      ax.set_xlabel("Log Charge Mean (ADC*ns)", fontsize=fontsize)
+      ax.set_ylabel("Log Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
+      plt.xticks(fontsize=fontsize)
+      plt.yticks(fontsize=fontsize)
+      fig.savefig(f'{display_plots_path}charge_std_charge_mean_log_histogram.jpg', bbox_inches='tight')
+      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_log_histogram.jpg', bbox_inches='tight')
+      plt.close()
+
+      fig=plt.figure()
+      ax=fig.add_subplot(111)
+
+      ax.hist2d(charge_mean_log, time_std_log, bins=bins, range=[[0, np.nanmax(charge_mean_log)+0.5],[np.nanmin(time_std_log), np.nanmax(time_std_log)]], cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
+
+      if boxes==True:
+          ax.vlines(np.log10(flasher_min),0, np.nanmax(time_std_log)+0.2, linestyle='dashed', colors='orange', label='Flasher Cut')
+          ax.legend(loc='upper right',fontsize=fontsize)
+
+      ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
+      ax.set_xlabel("Log Charge Mean (ADC*ns)", fontsize=fontsize)
+      ax.set_ylabel("Log Peak Time Standard Deviation (ADC*ns)", fontsize=fontsize)
+      plt.xticks(fontsize=fontsize)
+      plt.yticks(fontsize=fontsize)
+      fig.savefig(f'{display_plots_path}time_std_charge_mean_log_histogram.jpg', bbox_inches='tight')
+      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_log_histogram.jpg', bbox_inches='tight')
+      plt.close()
+
+   if regions==True:
+    
+      charge_window=[[np.nanmin(sorted_run_data[0][1]),shower_intercept+60],[0,shower_intercept+60]]
+      time_window=[[np.nanmin(sorted_run_data[0][1]), shower_intercept+60],[16, np.nanmax(sorted_run_data[0][4])]]
     
       fig=plt.figure()
       ax=fig.add_subplot(111)
       ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][2], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=charge_window)
 
-      if boxes=="True":
-        ax.vlines(flasher_min,0,1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
-        ax.plot(xbounds, ybounds, color='green', label='Shower Cut')
+      if boxes==True:
+        ax.plot([np.nanmin(sorted_run_data[0][1]),shower_intercept], [(-1)*np.nanmin(sorted_run_data[0][1])+shower_intercept, 0], color='green', label='Shower Cut')
         ax.legend(loc='upper right', fontsize=fontsize)
 
       ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=fontsize)
-      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-      ax.set_ylabel("Charge std (ADC*ns)", fontsize=fontsize)
+      ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+      ax.set_ylabel("Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
       plt.xticks(fontsize=fontsize)
       plt.yticks(fontsize=fontsize)
-      fig.savefig(f'{display_plots_path}charge_std_charge_mean_shower_region_histogram.jpg')
-      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_shower_region_histogram.jpg')
+      fig.savefig(f'{display_plots_path}charge_std_charge_mean_shower_region_histogram.jpg', bbox_inches='tight')
+      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_shower_region_histogram.jpg', bbox_inches='tight')
       plt.close()
 
       fig=plt.figure()
       ax=fig.add_subplot(111)
       ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][4], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=time_window)
 
-      if boxes=="True":
-        ax.vlines(flasher_min,0,1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
-        ax.legend(loc='upper right', fontsize=fontsize)
+    #   if boxes==True: #it really doesn't need this
+    #     ax.vlines(flasher_min,0,1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
+    #     ax.legend(loc='upper right', fontsize=fontsize)
 
       ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=fontsize)
-      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-      ax.set_ylabel("Time std (ns)", fontsize=fontsize)
+      ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+      ax.set_ylabel("Peak Time Standard Deviation (ns)", fontsize=fontsize)
       plt.xticks(fontsize=fontsize)
       plt.yticks(fontsize=fontsize)
-      fig.savefig(f'{display_plots_path}time_std_charge_mean_shower_region_histogram.jpg')
-      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_shower_region_histogram.jpg')
+      fig.savefig(f'{display_plots_path}time_std_charge_mean_shower_region_histogram.jpg', bbox_inches='tight')
+      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_shower_region_histogram.jpg', bbox_inches='tight')
       plt.close()
    
-   if flashers=="True":
+   if flashers==True:
 
       fig=plt.figure()
       ax=fig.add_subplot(111)
-      ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][2], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=[[flasher_min,flasher_min+1500],[250, 1500]])
-      if boxes=="True":
+      ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][2], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=[[flasher_min-20,flasher_min+1500],[250, 1500]])
+      if boxes==True:
         ax.vlines(flasher_min,0, 1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
         ax.legend(loc='upper right', fontsize=fontsize)
+
       ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)", fontsize=fontsize)
-      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-      ax.set_ylabel("Charge std (ADC*ns)", fontsize=fontsize)
+      ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+      ax.set_ylabel("Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
       plt.xticks(fontsize=fontsize)
       plt.yticks(fontsize=fontsize)
-      fig.savefig(f'{display_plots_path}charge_std_charge_mean_flasher_region_histogram.jpg')
-      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_flasher_region_histogram.jpg')
+      fig.savefig(f'{display_plots_path}charge_std_charge_mean_flasher_region_histogram.jpg', bbox_inches='tight')
+      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_flasher_region_histogram.jpg', bbox_inches='tight')
       plt.close()
 
       fig=plt.figure()
       ax=fig.add_subplot(111)
-      ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][4], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=[[flasher_min,flasher_min+1500],[10,16]])
+      ax.hist2d(sorted_run_data[0][1], sorted_run_data[0][4], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=[[flasher_min-20,flasher_min+1500],[10,16]])
 
-      if boxes=="True":
+      if boxes==True:
         ax.vlines(flasher_min,0, 26, colors='orange', linestyle='dashed', label='Flasher Cut')
         ax.legend(loc='upper right', fontsize=fontsize)
+
       ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)", fontsize=fontsize)
-      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-      ax.set_ylabel("Time std (ns)", fontsize=fontsize)
+      ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+      ax.set_ylabel("Peak Time Standard Deviation (ns)", fontsize=fontsize)
       plt.xticks(fontsize=fontsize)
       plt.yticks(fontsize=fontsize)
-      fig.savefig(f'{display_plots_path}time_std_charge_mean_flasher_region_histogram.jpg')
-      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_flasher_region_histogram.jpg')
+      fig.savefig(f'{display_plots_path}time_std_charge_mean_flasher_region_histogram.jpg', bbox_inches='tight')
+      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_charge_mean_flasher_region_histogram.jpg', bbox_inches='tight')
       plt.close()
 
-   if subrun_plots=="True":
+   if subrun_plots==True:
       fig=plt.figure()
       ax=fig.add_subplot(111)
-      ax.hist2d(sr_data[1], sr_data[4], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
+      ax.hist2d(sr_data[3], sr_data[4], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
 
-      if boxes=="True":
+      if boxes==True:
          ax.vlines(flasher_min,0,1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
          ax.plot(xbounds, ybounds, color='green', label='Shower Cut')
          ax.legend(loc='upper right', fontsize=fontsize)
 
       ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
-      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-      ax.set_ylabel("Charge std (ADC*ns)", fontsize=fontsize)
+      ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+      ax.set_ylabel("Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
       plt.xticks(fontsize=fontsize)
       plt.yticks(fontsize=fontsize)
-      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_histogram.jpg')
+      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_histogram.jpg', bbox_inches='tight')
       plt.close()
 
       fig=plt.figure()
       ax=fig.add_subplot(111)
       ax.hist2d(sr_data[3], sr_data[2], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
 
-      if boxes=="True":
+      if boxes==True:
          ax.vlines(flasher_min,0,30, colors='orange', linestyle='dashed', label='Flasher Cut')
          ax.legend(loc='upper right', fontsize=fontsize)
 
       ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
-      ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-      ax.set_ylabel("Time std (ns)", fontsize=fontsize)
+      ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+      ax.set_ylabel("Peak Time Standard (ns)", fontsize=fontsize)
       plt.xticks(fontsize=fontsize)
       plt.yticks(fontsize=fontsize)
-      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_histogram.jpg')
+      fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_histogram.jpg', bbox_inches='tight')
       plt.close()
 
-      if regions=="True":
+      if logscale==True:
+             
+        sr_charge_mean_log=np.log10(sr_data[3])
+        sr_charge_std_log=np.log10(sr_data[4])
+        sr_time_std_log=np.log10(sr_data[2])
+    
+        xline=np.arange(1,shower_intercept,(shower_intercept/10))
+        yline=(xline*(-1))+shower_intercept
+    
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+    
+        ax.hist2d(sr_charge_mean_log, sr_charge_std_log, bins=bins, range=[[0, np.nanmax(sr_charge_mean_log)+0.5],[np.nanmin(sr_charge_std_log)-0.5, np.nanmax(sr_charge_std_log)+0.5]], cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
+    
+        if boxes==True:
+            ax.vlines(np.log10(flasher_min),0, np.nanmax(sr_charge_std_log)+0.5, linestyle='dashed', colors='orange', label='Flasher Cut')
+            ax.plot(np.log10(xline),np.log10(yline), color='green', label='Shower Cut')
+            ax.legend(loc='lower right',fontsize=fontsize)
+    
+        ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
+        ax.set_xlabel("Log Charge Mean (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Log Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
+        plt.xticks(fontsize=fontsize)
+        plt.yticks(fontsize=fontsize)
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_log_histogram.jpg', bbox_inches='tight')
+        plt.close()
+    
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+    
+        ax.hist2d(sr_charge_mean_log, sr_time_std_log, bins=bins, range=[[0, np.nanmax(sr_charge_mean_log)+0.5],[np.nanmin(sr_time_std_log), np.nanmax(sr_time_std_log)]], cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None))
+    
+        if boxes==True:
+            ax.vlines(np.log10(flasher_min),0, np.nanmax(sr_time_std_log)+0.2, linestyle='dashed', colors='orange', label='Flasher Cut')
+            ax.legend(loc='upper right',fontsize=fontsize)
+    
+        ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
+        ax.set_xlabel("Log Charge Mean (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Log Peak Time Standard Deviation (ADC*ns)", fontsize=fontsize)
+        plt.xticks(fontsize=fontsize)
+        plt.yticks(fontsize=fontsize)
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_log_histogram.jpg', bbox_inches='tight')
+        plt.close()
+
+      if regions==True:
       
-        if tight=="True":
-         charge_window=[[-40,140],[0,140]]
-         time_window=[[-40, 140],[16, 28]]
-        else:
-         charge_window=[[-40, flasher_min],[0, 2300]]
-         time_window=[[-40, flasher_min],[13, 28]]
+         charge_window=[[np.nanmin(sr_data[3]),shower_intercept+60],[0,shower_intercept+60]]
+         time_window=[[np.nanmin(sr_data[3]), shower_intercept+60],[16, np.nanmax(sr_data[2])]]
     
          fig=plt.figure()
          ax=fig.add_subplot(111)
          ax.hist2d(sr_data[3], sr_data[4], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=charge_window)
 
-         if boxes=="True":
-           ax.vlines(flasher_min,0,1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
+         if boxes==True:
+        #    ax.vlines(flasher_min,0,1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
            ax.plot(xbounds, ybounds, color='green', label='Shower Cut')
            ax.legend(loc='upper right', fontsize=fontsize)
 
          ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)", fontsize=fontsize)
-         ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-         ax.set_ylabel("Charge std (ADC*ns)", fontsize=fontsize)
+         ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+         ax.set_ylabel("Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
          plt.xticks(fontsize=fontsize)
          plt.yticks(fontsize=fontsize)
-         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_charge_mean_shower_region_histogram.jpg')
+         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_shower_region_histogram.jpg', bbox_inches='tight')
          plt.close()
 
          fig=plt.figure()
          ax=fig.add_subplot(111)
          ax.hist2d(sr_data[3], sr_data[2], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=time_window)
 
-         if boxes=="True":
-            ax.vlines(flasher_min,0,1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
-            ax.legend(loc='upper right', fontsize=fontsize)
+        #  if boxes==True: # doesn't really need it here
+        #     ax.vlines(flasher_min,0,1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
+        #     ax.legend(loc='upper right', fontsize=fontsize)
 
          ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)", fontsize=fontsize)
-         ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-         ax.set_ylabel("Time std (ns)", fontsize=fontsize)
+         ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+         ax.set_ylabel("Peak Time Standard Deviation (ns)", fontsize=fontsize)
          plt.xticks(fontsize=fontsize)
          plt.yticks(fontsize=fontsize)
-         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_shower_region_histogram.jpg')
+         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_shower_region_histogram.jpg', bbox_inches='tight')
          plt.close()
          
-      if flashers=="True":
+      if flashers==True:
 
          fig=plt.figure()
          ax=fig.add_subplot(111)
-         ax.hist2d(sr_data[3], sr_data[4], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=[[flasher_min,flasher_min+1500],[250, 1500]])
+         ax.hist2d(sr_data[3], sr_data[4], bins = bins,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None),range=[[flasher_min-20,flasher_min+1500],[250, 1500]])
 
-         if boxes=="True":
+         if boxes==True:
             ax.vlines(flasher_min,0, 1E5, colors='orange', linestyle='dashed', label='Flasher Cut')
             ax.legend(loc='upper right', fontsize=fontsize)
 
          ax.set_title(f"Run {current_sr[0]}, Subruns{current_sr[1]} (Flasher Region)", fontsize=fontsize)
-         ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-         ax.set_ylabel("Charge std (ADC*ns)", fontsize=fontsize)
+         ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+         ax.set_ylabel("Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
          plt.xticks(fontsize=fontsize)
          plt.yticks(fontsize=fontsize)
-         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_flasher_region_histogram.jpg')
+         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_flasher_region_histogram.jpg', bbox_inches='tight')
          plt.close()
 
          fig=plt.figure()
          ax=fig.add_subplot(111)
-         ax.hist2d(sr_data[3], sr_data[2], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=[[flasher_min,flasher_min+1500],[10,16]])
+         ax.hist2d(sr_data[3], sr_data[2], bins = 400,cmap=plt.cm.jet ,norm=colors.LogNorm(vmin=1, vmax = None), range=[[flasher_min-20,flasher_min+1500],[10,16]])
 
-         if boxes=="True":
+         if boxes==True:
             ax.vlines(flasher_min,0, 26, colors='orange', linestyle='dashed', label='Flasher Cut')
             ax.legend(loc='upper right', fontsize=fontsize)
 
          ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (Flasher Region)", fontsize=fontsize)
-         ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-         ax.set_ylabel("Time std (ns)", fontsize=fontsize)
+         ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+         ax.set_ylabel("Peak Time Standard Deviation (ns)", fontsize=fontsize)
          plt.xticks(fontsize=fontsize)
          plt.yticks(fontsize=fontsize)
-         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_flasher_region_histogram.jpg')
+         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_flasher_region_histogram.jpg', bbox_inches='tight')
          plt.close()
 
 #1d histograms, being used
@@ -1023,9 +1126,9 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
     flasher_min=int(config_dict["charge_mean_flasher_min"])
     display_plots_path=config_dict["display_plots_path"]
     plots_save_path=config_dict["plots_save_path"]
-    subrun_plots=config_dict["subrun_plots"]
-    boxes=config_dict["boxes"]
-    regions=config_dict["shower_regions"]
+    subrun_plots=bool(int(config_dict["subrun_plots"]))
+    boxes=bool(int(config_dict["boxes"]))
+    regions=bool(int(config_dict["shower_regions"]))
     bins=int(config_dict["bins"])
     fontsize=int(config_dict["fontsize"])
     
@@ -1033,17 +1136,17 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
     ax=fig.add_subplot(111)
     ax.hist(sorted_run_data[0][1], bins = bins, log=True)
 
-    if boxes=="True":
+    if boxes==True:
         ax.vlines(flasher_min, 0, 10E5, colors='orange', linestyle='dashed', label='Flasher Cut')
 
     ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-    ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-    ax.set_ylabel("Counts", fontsize=fontsize)
+    ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+    ax.set_ylabel("Number of Events", fontsize=fontsize)
     ax.legend(loc='upper right', fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}charge_mean_histogram.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_histogram.jpg')
+    fig.savefig(f'{display_plots_path}charge_mean_histogram.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_histogram.jpg', bbox_inches='tight')
     plt.close()
 
     fig=plt.figure()
@@ -1051,22 +1154,22 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
     ax.hist(sorted_run_data[0][2], bins = bins, log=True)
 
     ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-    ax.set_xlabel("Charge Std (ADC*ns)", fontsize=fontsize)
-    ax.set_ylabel("Counts", fontsize=fontsize)
+    ax.set_xlabel("Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
+    ax.set_ylabel("Number of Events", fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}charge_std_histogram.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_histogram.jpg')
+    fig.savefig(f'{display_plots_path}charge_std_histogram.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_histogram.jpg', bbox_inches='tight')
     plt.close()
 
     fig=plt.figure()
     ax=fig.add_subplot(111)
     ax.hist(sorted_run_data[0][3], bins = bins, log=True)
     ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-    ax.set_xlabel("Mean Peak Time (ns)", fontsize=fontsize)
-    ax.set_ylabel("Counts", fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}time_mean_histogram.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_mean_histogram.jpg')
+    ax.set_xlabel("Peak Time Mean (ns)", fontsize=fontsize)
+    ax.set_ylabel("Number of Events", fontsize=fontsize)
+    fig.savefig(f'{display_plots_path}time_mean_histogram.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_mean_histogram.jpg', bbox_inches='tight')
     plt.close()
 
     fig=plt.figure()
@@ -1074,26 +1177,26 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
     ax.hist(sorted_run_data[0][4], bins = bins, log=True)
 
     ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-    ax.set_xlabel("Peak Time Std (ns)", fontsize=fontsize)
-    ax.set_ylabel("Counts", fontsize=fontsize)
+    ax.set_xlabel("Peak Time Standard Deviation (ns)", fontsize=fontsize)
+    ax.set_ylabel("Number of Events", fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}time_std_histogram.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_histogram.jpg')
+    fig.savefig(f'{display_plots_path}time_std_histogram.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_histogram.jpg', bbox_inches='tight')
     plt.close()
 
-    if regions=="True":
+    if regions==True:
         fig=plt.figure()
         ax=fig.add_subplot(111)
         ax.hist(sorted_run_data[0][1], bins = bins, log=True, range=(-40, 400))
 
         ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=fontsize)
-        ax.set_xlabel("Mean Charge (ADC*ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{display_plots_path}charge_mean_shower_region_histogram.jpg')
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_shower_region_histogram.jpg')
+        fig.savefig(f'{display_plots_path}charge_mean_shower_region_histogram.jpg', bbox_inches='tight')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_shower_region_histogram.jpg', bbox_inches='tight')
         plt.close()
 
         fig=plt.figure()
@@ -1101,12 +1204,12 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
         ax.hist(sorted_run_data[0][1], bins = bins, log=True, range=(flasher_min, flasher_min+1500))
 
         ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Flasher Region)", fontsize=fontsize)
-        ax.set_xlabel("Mean Charge (ADC*ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{display_plots_path}charge_mean_flasher_region_histogram.jpg')
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_flasher_region_histogram.jpg')
+        fig.savefig(f'{display_plots_path}charge_mean_flasher_region_histogram.jpg', bbox_inches='tight')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_mean_flasher_region_histogram.jpg', bbox_inches='tight')
         plt.close()
 
         fig=plt.figure()
@@ -1114,12 +1217,12 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
         ax.hist(sorted_run_data[0][2], bins = bins, log=True, range=(0,400))
 
         ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=fontsize)
-        ax.set_xlabel("Charge Std (ADC*ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_xlabel("Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{display_plots_path}charge_std_shower_region_histogram.jpg')
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_shower_region_histogram.jpg')
+        fig.savefig(f'{display_plots_path}charge_std_shower_region_histogram.jpg', bbox_inches='tight')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_charge_std_shower_region_histogram.jpg', bbox_inches='tight')
         plt.close()
 
         fig=plt.figure()
@@ -1127,101 +1230,113 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
         ax.hist(sorted_run_data[0][4], bins = bins, log=True, range=(18, 26))
 
         ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Shower Region)", fontsize=fontsize)
-        ax.set_xlabel("Peak Time Std (ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_xlabel("Peak Time Standard Deviation (ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{display_plots_path}time_std_shower_region_histogram.jpg')
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_shower_region_histogram.jpg')
+        fig.savefig(f'{display_plots_path}time_std_shower_region_histogram.jpg', bbox_inches='tight')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_std_shower_region_histogram.jpg', bbox_inches='tight')
         plt.close()
 
-    if subrun_plots=="True":
+    if subrun_plots==True:
         fig=plt.figure()
         ax=fig.add_subplot(111)
         ax.hist(sr_data[3], bins = bins, log=True)
 
-        if boxes=="True":
+        if boxes==True:
             ax.vlines(flasher_min, 0, 10E5, colors='orange', linestyle='dashed', label='Flasher Cut')
             ax.legend(loc='upper right', fontsize=fontsize)
 
-        ax.set_title(f"Mean Charge, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
-        ax.set_xlabel("Mean charge (ADC*ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
+        ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_mean_histogram.jpg')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_mean_histogram.jpg', bbox_inches='tight')
+        plt.close()
+
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+        ax.hist(sr_data[3], bins = bins, log=True, range=(flasher_min, flasher_min+1500))
+
+        ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (Flasher Region)", fontsize=fontsize)
+        ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
+        plt.xticks(fontsize=fontsize)
+        plt.yticks(fontsize=fontsize)
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_mean_flasher_region_histogram.jpg', bbox_inches='tight')
         plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
         ax.hist(sr_data[4], bins = bins, log=True)
 
-        ax.set_title(f"Charge Std, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
-        ax.set_xlabel("Charge Std (ADC*ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
+        ax.set_xlabel("Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_histogram.jpg')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_histogram.jpg', bbox_inches='tight')
         plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
         ax.hist(sr_data[1], bins = bins, log=True)
-        ax.set_title(f"Mean Peak Time, Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
-        ax.set_xlabel("Mean Peak Time (ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
+        ax.set_xlabel("Peak Time Mean (ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_mean_histogram.jpg')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_mean_histogram.jpg', bbox_inches='tight')
         plt.close()
 
         fig=plt.figure()
         ax=fig.add_subplot(111)
         ax.hist(sr_data[2], bins = bins, log=True)
 
-        ax.set_title(f"Peak Time Std, Run {current_sr[0]}, Subruns {current_sr[1]} (All Events)", fontsize=fontsize)
-        ax.set_xlabel("Peak Time Std (ns)", fontsize=fontsize)
-        ax.set_ylabel("Counts", fontsize=fontsize)
+        ax.set_title(f"Run {current_sr[0]}, Subruns {current_sr[1]} (All Events)", fontsize=fontsize)
+        ax.set_xlabel("Peak Time Standard Deviation (ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
-        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_histogram.jpg')
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_histogram.jpg', bbox_inches='tight')
         plt.close()
 
-        if regions=="True":
+        if regions==True:
             fig=plt.figure()
             ax=fig.add_subplot(111)
             ax.hist(sr_data[3], bins = bins, log=True, range=(-40, 400))
 
-            ax.set_title(f"Mean Charge, Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)", fontsize=fontsize)
-            ax.set_xlabel("Mean Charge (ADC*ns)", fontsize=fontsize)
-            ax.set_ylabel("Counts", fontsize=fontsize)
+            ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)", fontsize=fontsize)
+            ax.set_xlabel("Charge Mean (ADC*ns)", fontsize=fontsize)
+            ax.set_ylabel("Number of Events", fontsize=fontsize)
             plt.xticks(fontsize=fontsize)
             plt.yticks(fontsize=fontsize)
-            fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_mean_shower_region_histogram.jpg')
+            fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_mean_shower_region_histogram.jpg', bbox_inches='tight')
             plt.close()
 
             fig=plt.figure()
             ax=fig.add_subplot(111)
             ax.hist(sr_data[4], bins = bins, log=True, range=(0, 400))
 
-            ax.set_title(f"Charge Std, Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)", fontsize=fontsize)
-            ax.set_xlabel("Charge Std (ADC*ns)", fontsize=fontsize)
-            ax.set_ylabel("Counts", fontsize=fontsize)
+            ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)", fontsize=fontsize)
+            ax.set_xlabel("Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
+            ax.set_ylabel("Number of Events", fontsize=fontsize)
             plt.xticks(fontsize=fontsize)
             plt.yticks(fontsize=fontsize)
-            fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_shower_region_histogram.jpg')
+            fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_shower_region_histogram.jpg', bbox_inches='tight')
             plt.close()
 
             fig=plt.figure()
             ax=fig.add_subplot(111)
             ax.hist(sr_data[2], bins = bins, log=True, range=(18,26))
 
-            ax.set_title(f"Peak Time Std, Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)", fontsize=fontsize)
-            ax.set_xlabel("Peak Time Std (ns)", fontsize=fontsize)
-            ax.set_ylabel("Counts", fontsize=fontsize)
+            ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (Shower Region)", fontsize=fontsize)
+            ax.set_xlabel("Peak Time Standard Deviation (ns)", fontsize=fontsize)
+            ax.set_ylabel("Number of Events", fontsize=fontsize)
             plt.xticks(fontsize=fontsize)
             plt.yticks(fontsize=fontsize)
-            fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_shower_region_histogram.jpg')
+            fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_shower_region_histogram.jpg', bbox_inches='tight')
             plt.close()
 
 # #older event rate function, likely to be deleted
@@ -1332,49 +1447,49 @@ def environmental_summary(current_sr, subruns, config_dict):
     fig, ax,=plt.subplots()
     for quad in range(modules*4):
        ax.plot(fpmTemps[quad][3]/(time_step), fpmTemps[quad][1])
-    ax.set_ylabel("FPM Temp (C)", fontsize=fontsize)
-    ax.set_xlabel("Time(min)", fontsize=fontsize)
+    ax.set_ylabel("FPM Temperature (C)", fontsize=fontsize)
+    ax.set_xlabel("Time (min)", fontsize=fontsize)
     ax.set_title('Environmental Metrics', fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}FPM_temps_plot.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_FPM_temps_plot.jpg')
+    fig.savefig(f'{display_plots_path}FPM_temps_plot.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_FPM_temps_plot.jpg', bbox_inches='tight')
     plt.close()
 
     fig, ax,=plt.subplots()
     for board in range(modules*2):
        ax.plot(feeTemps[board][3]/(time_step), feeTemps[board][1])
-    ax.set_ylabel("FEE Temp (C)", fontsize=fontsize)
-    ax.set_xlabel("Time(min)", fontsize=fontsize)
+    ax.set_ylabel("FEE Temperature (C)", fontsize=fontsize)
+    ax.set_xlabel("Time (min)", fontsize=fontsize)
     ax.set_title('Environmental Metrics', fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}FEE_temps_plot.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_FEE_temps_plot.jpg')
+    fig.savefig(f'{display_plots_path}FEE_temps_plot.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_FEE_temps_plot.jpg', bbox_inches='tight')
     plt.close()
 
     fig, ax,=plt.subplots()
     for mod in range(modules):
        ax.plot(hv[mod][3]/(time_step),hv[mod][1])
     ax.set_ylabel("HV (V)", fontsize=fontsize)
-    ax.set_xlabel("Time(min)", fontsize=fontsize)
+    ax.set_xlabel("Time (min)", fontsize=fontsize)
     ax.set_title('Environmental Metrics', fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}HV_plot.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_HV_plot.jpg')
+    fig.savefig(f'{display_plots_path}HV_plot.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_HV_plot.jpg', bbox_inches='tight')
     plt.close()
 
     fig, ax,=plt.subplots()
     for mod in range(modules):
        ax.plot(current[mod][3]/(time_step),current[mod][1])
     ax.set_ylabel("Current (A)", fontsize=fontsize)
-    ax.set_xlabel("Time(min)", fontsize=fontsize)
+    ax.set_xlabel("Time (min)", fontsize=fontsize)
     ax.set_title('Environmental Metrics', fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
-    fig.savefig(f'{display_plots_path}current_plot.jpg')
-    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_current_plot.jpg')
+    fig.savefig(f'{display_plots_path}current_plot.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_current_plot.jpg', bbox_inches='tight')
     plt.close()
 
     
@@ -1410,20 +1525,18 @@ def environmental_summary(current_sr, subruns, config_dict):
 #    return run, subrun
 
 config_dict = load_config("/data/user/fbivens5020/DQM_scripts/DQM_config.txt")
-monitoring=config_dict["monitoring"]
-live=config_dict["live"]
-
-if live=="True":
+monitoring=bool(config_dict["monitoring"])
+live=bool(int(config_dict["live"]))
+current_target=[int(config_dict["initial_run"]),0] #if not live the inital run is taken as the starting point
+if live==True:
     current_target=[(int(config_dict["initial_run"])+1),0] #if live we're looking for the next run assuming inital run is completed
-else:
-    current_target=[int(config_dict["initial_run"]),0] #if not live the inital run is taken as the starting point
 
 runs=[] #will hold run ids and starting times
 subruns=[] #will hold subrun ids and subrun starting times, will be cleared on each run
 sorted_run_data_format=[[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]]]
 sorted_run_data=sorted_run_data_format #4 lists of 8 empty lists, will be the sorted data object the plots use
-final_subrun=[int(config_dict["final_run"]), 2] #this is sort of a testing object, doesn't work super great across runs
-while monitoring=="True":
+final_subrun=[int(config_dict["final_run"]), 15] #this is sort of a testing object, doesn't work super great across runs
+while monitoring==True:
     config_dict = load_config("/data/user/fbivens5020/DQM_scripts/DQM_config.txt")
     print(f'\nlooking at run {current_target[0]}, sub-run {current_target[1]}')
     #loop that should check and wait for the right file for as long as it needs to
@@ -1490,13 +1603,13 @@ while monitoring=="True":
     event_rate_hists(current_target, sorted_run_array, sorted_subrun_array, config_dict)#event rate histograms for overall run and subrun
     print(f'\n event rate histograms took {time.time()-time_h} s\n')
     #2d histogram function here
-    if config_dict["histograms_2d"]=="True":
+    if bool(int(config_dict["histograms_2d"]))==True:
         time_ht=time.time()
         sorting_hists_2d(current_target, sorted_run_data, sr_data, config_dict)
         print(f'\n 2d histograms took {time.time()-time_ht} s\n')
 
     #1d histogram function
-    if config_dict["histograms_1d"]=="True":
+    if bool(int(config_dict["histograms_1d"]))==True:
         time_ho=time.time()
         sorting_hists_1d(current_target, sorted_run_array, sr_data, config_dict)
         print(f'\n 1d histograms took {time.time()-time_ho} s\n')
@@ -1508,7 +1621,7 @@ while monitoring=="True":
     #'heat' maps/camera visualizations function here
 
     #time dt graphs
-    if config_dict["histograms_dt"]=="True":
+    if bool(int(config_dict["histograms_dt"]))==True:
         time_dt=time.time()
         delt_hists(current_target, sorted_run_array, sorted_subrun_array, config_dict)
         print(f'\n time dt plots took {time.time()-time_p} s\n')
