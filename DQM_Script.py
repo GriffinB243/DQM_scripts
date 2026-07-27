@@ -1552,7 +1552,7 @@ while monitoring==True:
                 ready=os.path.exists(config_dict["current_file"].format(current_target[0],current_target[1]))
             print('\nit is now ready for analysis')
     else:
-        print(f'no r0 file for {current_target} found')
+        print(f'no r0 file for {current_target} found') #loop that should prevent script from going to the next run too early
         ready=False
         set=False
         while ready==False or set==False:
@@ -1561,7 +1561,7 @@ while monitoring==True:
         if ready==True:
             print('\nfile has been found')
             continue
-        if set==True:
+        elif set==True:
             print('\nnew run has been found')
             current_target=[current_target[0]+1, 0]
             continue
