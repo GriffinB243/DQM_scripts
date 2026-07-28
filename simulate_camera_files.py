@@ -98,33 +98,33 @@ def extract_values(filepath, block_start_pattern, value_patterns):
     """
     block_start_re = _block_pattern_to_regex(block_start_pattern)
     compiled = {name: _pattern_to_regex(p) for name, p in value_patterns.items()}
+    found = {}
+    for name, regex in compiled.items():
+        found[name] = False
 
     blocks = []
     current_block = None
-    found = False
     with open(filepath, 'r') as f:
         for raw_line in f:
-            if not found:
-                line = raw_line.rstrip('\n')
+            line = raw_line.rstrip('\n')
 
-                if block_start_re.search(line):
-                    current_block = {'block_header': line}
-                    for name in value_patterns:
-                        current_block[name] = []
-                    blocks.append(current_block)
-                    continue
+            if block_start_re.search(line):
+                current_block = {'block_header': line}
+                for name in value_patterns:
+                    current_block[name] = []
+                blocks.append(current_block)
+                continue
 
-                if current_block is None:
-                    continue  # ignore anything before the first block
-                found = False
-                for name, regex in compiled.items():
-                    m = regex.search(line)
-                    if m:
-                        current_block[name].append(float(m.group(1)))
-                        found = True
-                        pass
-                    
-                    if found: pass
+            if current_block is None:
+                continue  # ignore anything before the first block
+            
+            for name, regex in compiled.items():
+                m = regex.search(line)
+                if m and not found[name]:
+                    current_block[name].append(float(m.group(1)))
+                    found[name] = True
+                    pass
+                if found[name]: pass
                     
 
     return blocks
