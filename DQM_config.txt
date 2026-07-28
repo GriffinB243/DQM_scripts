@@ -10,6 +10,7 @@ monitoring: 1
 live: 0
 initial_run: 400215
 final_run: 400215
+runtime_test: 1
 histograms_1d: 1
 histograms_2d: 1
 histograms_dt: 1
@@ -29,11 +30,11 @@ charge_mean_flasher_min: 2500
 shower_intercept: 80
 FEE_temp_high: 40
 FEE_temp_low: 20
-FPM_temp_high: 40
+FPM_temp_high: 35
 FPM_temp_low: 20
 current_high: 1
 current_low: 0
-hv_high: 40
+hv_high: 36
 hv_low: 25
 display_plots_path: /data/user/fbivens5020/DQM_scripts/DQM_plots/display_plots/
 plots_save_path: /data/user/fbivens5020/DQM_scripts/DQM_plots/subrun_plots/

@@ -20,7 +20,7 @@ os.system(f'rm -r {outfolder_npys}*')
 r0_filename = '/data/wipac/CTA/targetcdata/run{0}_subrun{1}_r0.tio'
 log_file = '/data/wipac/CTA/targetcdata/run{0}_log.log'
 
-mod_config = load_csv('./module_config.csv')
+mod_config = load_csv('/data/user/fbivens5020/DQM_scripts/module_config.csv')
 
 fee_temp_file = outfolder_npys + 'temperatures_FEEs_run{0}_subrun{1}.npy'
 fpm_temp_file = outfolder_npys + 'temperatures_FPMs_run{0}_subrun{1}.npy'
@@ -154,7 +154,8 @@ def generate_temps_FEEs(run, subrun):
 
     # temps = []
     try:
-        np.save(fee_temp_file.format(run, subrun), temps)
+        np.save(fee_temp_file.format(run, subrun), np.array(temps))
+        print(f'Shape of Fee temps: {np.array(temps).shape}')
     except:
         pass
 
@@ -187,12 +188,12 @@ def generate_HV_current(run, subrun):
 
     current = [blocksCur[0][key][0] for ind, key in enumerate(blocksCur[0].keys()) if ind != 0 and len(blocksCur[0][key]) > 0]
     try:
-        np.save(fpm_hv_file.format(run, subrun), hv)
+        np.save(fpm_hv_file.format(run, subrun), np.array(hv))
     except:
         pass
     
     try:
-        np.save(fee_current_file.format(run, subrun), current)
+        np.save(fee_current_file.format(run, subrun), np.array(current))
     except:
         pass
 

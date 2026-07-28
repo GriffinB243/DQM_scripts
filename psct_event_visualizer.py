@@ -47,6 +47,7 @@ config_properties_base = {"module_config_path": "./module_config.csv",
                         "sector_grid": "True",
                         "default_display": "sector",
                         "default_image": "peak",
+                        "projected_image": "False",
                         "empty_modules_nans": "False",
                         "title_font": "15",
                         "colorbar_legend_font": "15",
@@ -104,6 +105,12 @@ def load_config_objects():
         default_image = config_properties["default_image"]
     except:
         default_image = config_properties_base["default_image"]
+    
+    global default_projected
+    try:
+        default_projected = config_properties["projected_image"] == "True"
+    except:
+        default_projected = config_properties_base["projected_image"] == "True"
 
     global title_font
     try:
@@ -585,12 +592,14 @@ def get_event_from_reader(event = None, reader = None):
 def display_event(path_to_file = None, 
                   im_type = None, 
                   disp_type = None, 
+                  projected = None,
                   fpms = fpms_t, 
                   title = "",
+                  colorbar_legend = None,
                   font = None,
                   event = 0, 
                   frame = 0, 
-                  save_im = None, 
+                  save = None, 
                   display = True,  
                   reader = None,
                   wfs = None, 
@@ -599,10 +608,14 @@ def display_event(path_to_file = None,
                   colorscheme = None,
                   colormap = None,
                   large_file = False,
-                  reader_r0 = None):
+                  reader_r0 = None,
+                  save_im = None,):
     load_config_objects()
-    if reader != None:
-        reader_r0 = reader
+    if reader_r0 != None:
+        reader = reader_r0
+        print("'reader_r0' is deprecated, use 'reader'")
+    if save_im != None:
+        print("'save_im' is deprecated, use 'save'")
     
     if im_type == None:
         im_type = default_image
@@ -612,7 +625,13 @@ def display_event(path_to_file = None,
         colormap = colorscheme_default
     if colorscheme != None:
         colormap = colorscheme
-    if disp_type == "minicam": disp_type = "sector"
+    if disp_type == "minicam": 
+        print()
+        disp_type = "sector"
+    if projected == None:
+        projected = default_projected
+    if colorbar_legend == None:
+        colorbar_legend = colorbar_desc[im_type]
     
     if font != None:
         global title_font
@@ -628,35 +647,35 @@ def display_event(path_to_file = None,
     if im_type not in modes_of_images:
         raise Exception(f"ERROR: wrong image type '{im_type}', choose among: 'peak', 'time', 'ani', 'img', 'charge'")
 
-    if save_im != None:
+    if save != None:
         if im_type in ["img", "time", "peak", "charge", "std"]:
 
-            if save_im[-4:][0] == ".":
-                if save_im[-4:] not in [".png", ".jpg"]:
-                    save_im = save_im[:-4] + ".png" 
-            elif save_im[-5:][0] == ".":
-                if save_im[-5:] not in [".jpeg"]:
-                    save_im = save_im[:-5] + ".png"
+            if save[-4:][0] == ".":
+                if save[-4:] not in [".png", ".jpg"]:
+                    save = save[:-4] + ".png" 
+            elif save[-5:][0] == ".":
+                if save[-5:] not in [".jpeg"]:
+                    save = save[:-5] + ".png"
             else:
-                save_im = save_im + ".png"
+                save = save + ".png"
         elif im_type in ["ani"]:
 
-            if save_im[-4:][0] == ".":
-                if save_im[-4:] not in [".gif", ".mp4"]:
-                    save_im = save_im[:-4] + ".gif" 
+            if save[-4:][0] == ".":
+                if save[-4:] not in [".gif", ".mp4"]:
+                    save = save[:-4] + ".gif" 
             else:
-                save_im = save_im + ".gif"
+                save = save + ".gif"
 
 
     img_args0 = img_argss[im_type].copy()
 
-    img_args0.append([title, colorbar_desc[im_type]])
+    img_args0.append([title, colorbar_legend])
     if img_args == None:
         img_args = img_args0
     else:
         img_args = img_args[:6] + img_args0[-(len(img_args0)-min(len(img_args), 6)):]
         
-    img_args.append(save_im)
+    img_args.append(save)
     img_args.append(displaay)
     img_args.append(colormap)
 
@@ -671,62 +690,58 @@ def display_event(path_to_file = None,
     
     
     if wfs == None:
-        if reader_r0 == None:
+        if reader == None:
             checks = glob.glob(path_to_file)
             if len(checks) > 0:
-                reader_r0 = target_io.WaveformArrayReader(path_to_file)
+                reader = target_io.WaveformArrayReader(path_to_file)
             else:
                 raise Exception(f"File '{path_to_file}' does not exist.")
-        nss_p_ev = reader_r0.fNSamples
-        nev_fil = reader_r0.fNEvents
+        nss_p_ev = reader.fNSamples
+        nev_fil = reader.fNEvents
         event = event % nev_fil
         frame = frame % nss_p_ev #ns
-        if not reader_r0.fR1:
+        if not reader.fR1:
             if not large_file:
-                wfs_r0 = [np.zeros((reader_r0.fNPixels, reader_r0.fNSamples), dtype=np.ushort) for _ in range(reader_r0.fNEvents)]
-                for i in range(reader_r0.fNEvents):
-                    reader_r0.GetR0Event(i, wfs_r0[i])
+                wfs_r0 = [np.zeros((reader.fNPixels, reader.fNSamples), dtype=np.ushort) for _ in range(reader.fNEvents)]
+                for i in range(reader.fNEvents):
+                    reader.GetR0Event(i, wfs_r0[i])
             else:
-                wfs_r0_ev = np.zeros((reader_r0.fNPixels, reader_r0.fNSamples), dtype=np.ushort)
-                reader_r0.GetR0Event(event, wfs_r0_ev)
+                wfs_r0_ev = np.zeros((reader.fNPixels, reader.fNSamples), dtype=np.ushort)
+                reader.GetR0Event(event, wfs_r0_ev)
                 wfs_r0 = [wfs_r0_ev]
         else:
             if not large_file:
-                wfs_r0 = [np.zeros((reader_r0.fNPixels, reader_r0.fNSamples), dtype=np.float32) for _ in range(reader_r0.fNEvents)]
-                for i in range(reader_r0.fNEvents):
-                    reader_r0.GetR1Event(i, wfs_r0[i])
+                wfs_r0 = [np.zeros((reader.fNPixels, reader.fNSamples), dtype=np.float32) for _ in range(reader.fNEvents)]
+                for i in range(reader.fNEvents):
+                    reader.GetR1Event(i, wfs_r0[i])
             else:
-                wfs_r0_ev = np.zeros((reader_r0.fNPixels, reader_r0.fNSamples), dtype=np.float32)
-                reader_r0.GetR1Event(event, wfs_r0_ev)
+                wfs_r0_ev = np.zeros((reader.fNPixels, reader.fNSamples), dtype=np.float32)
+                reader.GetR1Event(event, wfs_r0_ev)
                 wfs_r0 = [wfs_r0_ev]
 
         wfs = prep_lists(wfs_r0)
-        
-        del reader_r0
+        del reader
     else:
         shapp = wfs[0].shape
         nss_p_ev = shapp[0]
         nev_fil = len(wfs)
         event = event % nev_fil
         frame = frame % nss_p_ev #ns
-        
-   
-    
 
     if len(wfs) > 1:
-        
         wf = wfs[event]
     else:
         wf = wfs[0]
-        
 
     finn = [None, None]
 
-    if save_im != None or display == True:
+    if save != None or display == True:
 
         if im_type == "img":
 
             a = arr_gen(wf[frame], fpms)
+            if not projected:
+                a = a[::-1,:]
             if img_args[4] == None:
                 img_args[4] = np.nanmin(a[a>0.0])
             if img_args[5] == None:
@@ -737,12 +752,14 @@ def display_event(path_to_file = None,
         elif im_type == "ani":
 
             a = np.array([arr_gen(wf[l], fpms) for l in range(nss_p_ev)])
+            if not projected:
+                a = a[:,::-1,:]
             if img_args[4] == None:
                 img_args[4] = np.nanmin(a[a>0.0])
             if img_args[5] == None:
                 img_args[5] = np.nanmax(a[a>0.0])
             
-            finn = animate_frames(a, camera_image, other_args=img_args, interval=1000/ns_per_s, save = save_im)
+            finn = animate_frames(a, camera_image, other_args=img_args, interval=1000/ns_per_s, save = save)
             if not display:
                 plt.close()
                 finn = [None, None]
@@ -755,6 +772,10 @@ def display_event(path_to_file = None,
 
             wfs_fin = np.moveaxis(wfs_fin,2,0) # wfs[event][fpm][fee_ch][time]
             a = arr_gen(wfs_fin[0], fpms)
+            if not projected:
+                a = a[::-1,:]
+            
+
             if img_args[4] == None:
                 img_args[4] = np.nanmin(a[a>0.0])
             if img_args[5] == None:
@@ -769,6 +790,8 @@ def display_event(path_to_file = None,
 
             wfs_fin = np.moveaxis(wfs_fin,2,0) # wfs[event][fpm][fee_ch][time]
             a = arr_gen(wfs_fin[0], fpms)
+            if not projected:
+                a = a[::-1,:]
             
             if img_args[4] == None:
                 img_args[4] = np.nanmin(a[a>0.0])
@@ -784,6 +807,8 @@ def display_event(path_to_file = None,
 
             wfs_fin = np.moveaxis(wfs_fin,2,0) # wfs[event][fpm][fee_ch][time]
             a = arr_gen(wfs_fin[0], fpms)
+            if not projected:
+                a = a[::-1,:]
             
             if img_args[4] == None:
                 img_args[4] = np.nanmin(a[a>0.0])
@@ -799,6 +824,8 @@ def display_event(path_to_file = None,
 
             wfs_fin = np.moveaxis(wfs_fin,2,0) # wfs[event][fpm][fee_ch][time]
             a = arr_gen(wfs_fin[0], fpms)
+            if not projected:
+                a = a[::-1,:]
             
             if img_args[4] == None:
                 img_args[4] = np.nanmin(a[a>0.0])
@@ -814,11 +841,12 @@ def main():
     parser.add_argument("-r", "--run", help="run to see. Overridden by a -file input", default=None)
     parser.add_argument("-sr", "--subrun", help="subrun to see. Overidden by a -file input", default="0")
     parser.add_argument("-ev", "--event", help="Event to see", default=0)
-    parser.add_argument("-type", "--type", help="img or ani, for image or animation", default=default_image)
+    parser.add_argument("-type", "--type", help="peak, time, ani, img, charge, std", default=default_image)
     parser.add_argument("-title", "--title", help="title of image", default="Run {0} Event {2}")
     parser.add_argument("-f", "--frame", help="Frame of event, if image", default=0)
     parser.add_argument("-dt", "--disp_type", help="Type of data run: camera, sector", default=default_display)
     parser.add_argument("-display", "--disp", help="whether to show image or animation", action="store_true")
+    parser.add_argument("-proj", "--projected", help="whether to show it in camera perspective (default is telescope perspective)", action="store_true")
     parser.add_argument("-save", "--save", help="path to save", default = None) 
 
     args = parser.parse_args()
@@ -832,6 +860,11 @@ def main():
         save_im = args.save
         displaay = args.disp
         disp_type = args.disp_type
+
+        if not args.projected:
+            projected = default_projected
+        else:
+            projected = True
 
         if args.file != None:
             path_to_file = args.file
@@ -865,10 +898,11 @@ def main():
                       fpms= fpms_t, 
                       event=event, 
                       frame= frame, 
-                      save_im= save_im, 
+                      save= save_im, 
                       display= displaay, 
                       img_args = img_args_f, 
                       title = title,
+                      projected = projected,
                       large_file=True)
         
     else:

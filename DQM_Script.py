@@ -7,6 +7,7 @@ import matplotlib.colors as colors
 import matplotlib.patches as patches
 from numba import njit
 import time
+from psct_event_visualizer import display_event, get_reader_object, get_event_from_reader # Uses target_io and csv, as well as numpy and matplotlib of course
 
 plt.rcParams['figure.dpi'] = 300
 
@@ -42,7 +43,7 @@ def read_wfs(calfile, save=False, reader = None):
         reader = target_io.WaveformArrayReader(calfile, silent=True)
     all_wfs=[]
     times = []
-    for ev in range(reader.fNEvents):
+    for ev in trange(reader.fNEvents, desc="Reading Waveforms"):
         wfs = np.zeros((reader.fNPixels, reader.fNSamples), dtype=np.float32)
         reader.GetR1Event(ev, wfs)
         times.append(float(reader.fTACK_time))
@@ -526,7 +527,7 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
 
     flasher_min=int(config_dict["charge_mean_flasher_min"])
     shower_intercept=int(config_dict["shower_intercept"])
-    for event in range(len(sr_data[0])):
+    for event in trange(len(sr_data[0]), desc='Sorting Events'):
         #all events data
             
         sorted_run_data[0][0].append(sr_data[5][event]-subruns[0][1]) #set actual time
@@ -1492,7 +1493,254 @@ def environmental_summary(current_sr, subruns, config_dict):
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_current_plot.jpg', bbox_inches='tight')
     plt.close()
 
+def new_environmental_summary(current_sr, subruns, config_dict):
+    modules=int(config_dict["modules"])
+    time_step=float(config_dict["time_step"])
+    display_plots_path=config_dict["display_plots_path"]
+    plots_save_path=config_dict["plots_save_path"]
+    fontsize=int(config_dict["fontsize"])
+    FEE_temp_high=float(config_dict["FEE_temp_high"])
+    FEE_temp_low=float(config_dict["FEE_temp_low"])
+    # FPM_temp_high=float(config_dict["FPM_temp_high"])
+    # FPM_temp_low=float(config_dict["FPM_temp_low"])
+    current_high=float(config_dict["current_high"])
+    current_low=float(config_dict["current_low"])
+    hv_high=float(config_dict["hv_high"])
+    hv_low=float(config_dict["hv_low"])
+
+    # fpmTemp_list=[]
+    fee_temp_list=[]
+    hv_list=[]
+    current_list=[]
+
+    for sr in range(current_sr[1]+1):
+
+    #   fpmTemp_data=np.load(config_dict["FPM_temp_file"].format(current_sr[0], sr))
+    #   fpmTemp_list.append(fpmTemp_data)
+
+      feeTemp_data=np.load(config_dict["FEE_temp_file"].format(current_sr[0], sr))
+      fee_temp_list.append(feeTemp_data)
+
+      hv_data=np.load(config_dict["hv_file"].format(current_sr[0], sr))
+      hv_list.append(hv_data)
+
+      current_data=np.load(config_dict["current_file"].format(current_sr[0], sr))
+      current_list.append(current_data)
+
+    # fpmTemps=np.zeros((modules*4,4,len(fpmTemp_list[:])))
+    fee_temps=np.zeros((modules*2,4,len(fee_temp_list[:])))
+    hv=np.zeros((modules,4,len(hv_list[:])))
+    current=np.zeros((modules,4,len(current_list[:])))
+
+    for sr in range(current_sr[1]+1):
+
+        # for quad in range(modules*4):
+        #    fpmTemps[quad][0][sr]=sr #subrun id
+        #    fpmTemps[quad][1][sr]=fpmTemp_list[sr][quad] #actual value
+        #    fpmTemps[quad][2][sr]=quad//4 # module id in mapping order
+        #    fpmTemps[quad][3][sr]=subruns[sr][1]-subruns[0][1] #time corrected for start of run
+        #    if sr==current_sr[1]: #only tattle on bad modules once and specify when they were bad
+        #        if fpmTemp_list[sr][quad]>FPM_temp_high:
+        #           print(f"\nSubrun {sr}: FPM in module {quad//4} is above {FPM_temp_high} C at {fpmTemp_list[sr][quad]} C!")
+        #        if fpmTemp_list[sr][quad]<FPM_temp_low:
+        #           print(f"\nSubrun {sr}: FPM in module {quad//4} is below {FPM_temp_low} C at {fpmTemp_list[sr][quad]} C!")
+
+        for board in range(modules*2):
+           fee_temps[board][0][sr]=sr
+           fee_temps[board][1][sr]=fee_temp_list[sr][board]
+           fee_temps[board][2][sr]=board//2
+           fee_temps[board][3][sr]=subruns[sr][1]-subruns[0][1]
+           if sr==current_sr[1]:
+               if fee_temp_list[sr][board]>FEE_temp_high:
+                     print(f"\nSubrun {sr}: FEE in module {board//2} is above {FEE_temp_high} C at {fee_temp_list[sr][board]} C!")
+               if fee_temp_list[sr][board]<FEE_temp_low:
+                     print(f"\nSubrun {sr}: FEE in module {board//2} is below {FEE_temp_low} C at {fee_temp_list[sr][board]} C!")
+
+        for mod in range(modules):
+           hv[mod][0][sr]=sr
+           hv[mod][1][sr]=hv_list[sr][mod]
+           hv[mod][2][sr]=mod
+           hv[mod][3][sr]=subruns[sr][1]-subruns[0][1]
+           if sr==current_sr[1]:
+               if hv_list[sr][mod]>hv_high:
+                  print(f"\nSubrun {sr}: HV in module {mod} is above {hv_high} V at {hv_list[sr][mod]} V!")
+               if hv_list[sr][mod]<hv_low:
+                  print(f"\nSubrun {sr}: HV in module {mod} is below {hv_low} V at {hv_list[sr][mod]} V!")
+
+           current[mod][0][sr]=sr
+           current[mod][1][sr]=current_list[sr][mod]
+           current[mod][2][sr]=mod
+           current[mod][3][sr]=subruns[sr][1]-subruns[0][1]
+           if sr==current_sr[1]:
+               if current_list[sr][mod]>current_high:
+                  print(f"\nSubrun {sr}: Current in module {mod} is above {current_high} A at {current_list[sr][mod]} A!")
+               if current_list[sr][mod]<current_low:
+                  print(f"\nSubrun {sr}: Current in module {mod} is below {current_low} A at {current_list[sr][mod]} A!")
+
+    # fpm_wfs=np.zeros((1,current_sr[1]+1,25,64))
+    fee_wfs=np.zeros((1,current_sr[1]+1,25,64))
+    hv_wfs=np.zeros((1,current_sr[1]+1,25,64))
+    current_wfs=np.zeros((1,current_sr[1]+1,25,64))
+
+    for subrun in range(current_sr[1]+1):
+        for mod in range(modules):
+            # fpm_wfs[0][subrun][mod][0:16]=fpmTemps[mod*4][1][subrun]
+            # fpm_wfs[0][subrun][mod][16:32]=fpmTemps[(mod*4)+1][1][subrun]
+            # fpm_wfs[0][subrun][mod][32:48]=fpmTemps[(mod*4)+2][1][subrun]
+            # fpm_wfs[0][subrun][mod][48:64]=fpmTemps[(mod*4)+3][1][subrun]
+
+            fee_wfs[0][subrun][mod][0:32]=fee_temps[mod*2][1][subrun]
+            fee_wfs[0][subrun][mod][32:64]=fee_temps[(mod*2)+1][1][subrun]
+
+            hv_wfs[0][subrun][mod][0:64]=hv[mod][1][subrun]
+
+            current_wfs[0][subrun][mod][0:64]=current[mod][1][subrun]
+
+
+    # fig, ax,=plt.subplots()
+    # for quad in range(modules*4):
+    #    ax.plot(fpmTemps[quad][3]/(time_step), fpmTemps[quad][1])
+    # ax.hlines(FPM_temp_high, 0, fpmTemps[0][3][-1]/(time_step), linestyles='dashed', colors='red')
+    # ax.hlines(FPM_temp_low, 0, fpmTemps[0][3][-1]/(time_step), linestyles='dashed', colors='blue')
+    # ax.set_ylabel("FPM Temperature (C)", fontsize=fontsize)
+    # ax.set_xlabel("Time (min)", fontsize=fontsize)
+    # ax.set_title('Environmental Metrics', fontsize=fontsize)
+    # plt.xticks(fontsize=fontsize)
+    # plt.yticks(fontsize=fontsize)
+    # fig.savefig(f'{display_plots_path}FPM_temps_plot.jpg', bbox_inches='tight')
+    # fig.savefig(f'{plots_save_path}run_{current_sr[0]}_FPM_temps_plot.jpg', bbox_inches='tight')
+    # plt.close()
+
+    fig, ax,=plt.subplots()
+    for board in range(modules*2):
+       ax.plot(fee_temps[board][3]/(time_step), fee_temps[board][1])
+    ax.hlines(FEE_temp_high, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='red')
+    ax.hlines(FEE_temp_low, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='blue')
+    ax.set_ylabel("FEE Temperature (C)", fontsize=fontsize)
+    ax.set_xlabel("Time (min)", fontsize=fontsize)
+    ax.set_title('Environmental Metrics', fontsize=fontsize)
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
+    fig.savefig(f'{display_plots_path}FEE_temps_plot.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_FEE_temps_plot.jpg', bbox_inches='tight')
+    plt.close()
+
+    fig, ax,=plt.subplots()
+    for mod in range(modules):
+       ax.plot(hv[mod][3]/(time_step),hv[mod][1])
+    ax.hlines(hv_high, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='red')
+    ax.hlines(hv_low, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='blue')
+    ax.set_ylabel("HV (V)", fontsize=fontsize)
+    ax.set_xlabel("Time (min)", fontsize=fontsize)
+    ax.set_title('Environmental Metrics', fontsize=fontsize)
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
+    fig.savefig(f'{display_plots_path}HV_plot.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_HV_plot.jpg', bbox_inches='tight')
+    plt.close
+
+    fig, ax,=plt.subplots()
+    for mod in range(modules):
+       ax.plot(current[mod][3]/(time_step),current[mod][1])
+    ax.hlines(current_high, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='red')
+    ax.hlines(current_low, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='blue')
+    ax.set_ylabel("Current (A)", fontsize=fontsize)
+    ax.set_xlabel("Time (min)", fontsize=fontsize)
+    ax.set_title('Environmental Metrics', fontsize=fontsize)
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
+    fig.savefig(f'{display_plots_path}current_plot.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_current_plot.jpg', bbox_inches='tight')
+    plt.close()
+
+    # fig, axs, wfs = display_event(None, 
+    #                           event = 0, # If not provided, plots event 0
+    #                           im_type='img',
+    #                           frame=current_sr[1],
+    #                           projected=True,
+    #                           title=f"Run {current_sr[0]} Subrun {current_sr[1]}\nFPM Temperatures", # Title. if nto provided, it leaves it in blank
+    #                           colorbar_legend="Temperature (C)",
+    #                           font = 14, # Font for all labels. If not provided, fetches from config file
+    #                           wfs = [ev for ev in fpm_wfs],
+    #                           img_args = [5, False, True, True, None, None],
+    #                           colormap='coolwarm'
+    #                           )
+    # fig.savefig(f'{display_plots_path}FPM_temps_map.jpg', bbox_inches='tight')
+    # fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_FPM_temps_map.jpg', bbox_inches='tight')
+    # plt.close()
+
+    fig, axs, wfs = display_event(None, 
+                                  event = 0, # If not provided, plots event 0
+                                  im_type='img',
+                                  frame=current_sr[1],
+                                  projected=True,
+                                  title=f"Run {current_sr[0]} Subrun {current_sr[1]}\nFEE Temperatures", # Title. if nto provided, it leaves it in blank
+                                  colorbar_legend="Temperature (C)",
+                                  font = 14, # Font for all labels. If not provided, fetches from config file
+                                  wfs = [ev for ev in fee_wfs],
+                                  img_args = [5, False, True, True, None, None],
+                                  colormap='coolwarm'
+                                  )
+    fig.savefig(f'{display_plots_path}FEE_temps_map.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_FEE_temps_map.jpg', bbox_inches='tight')
+    plt.close()
+
+    fig, axs, wfs = display_event(None, 
+                                      event = 0, # If not provided, plots event 0
+                                      im_type='img',
+                                      frame=current_sr[1],
+                                      projected=True,
+                                      title=f"Run {current_sr[0]} Subrun {current_sr[1]}\nHV Values", # Title. if nto provided, it leaves it in blank
+                                      colorbar_legend="HV (V)",
+                                      font = 14, # Font for all labels. If not provided, fetches from config file
+                                      wfs = [ev for ev in hv_wfs],
+                                      img_args = [5, False, True, True, None, None],
+                                      colormap='coolwarm'
+                                      )
+    fig.savefig(f'{display_plots_path}HV_map.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_HV_map.jpg', bbox_inches='tight')
+    plt.close()
+
+    fig, axs, wfs = display_event(None, 
+                                          event = 0, # If not provided, plots event 0
+                                          im_type='img',
+                                          frame=current_sr[1],
+                                          projected=True,
+                                          title=f"Run {current_sr[0]} Subrun {current_sr[1]}\nCurrent Values", # Title. if nto provided, it leaves it in blank
+                                          colorbar_legend="Current (A)",
+                                          font = 14, # Font for all labels. If not provided, fetches from config file
+                                          wfs = [ev for ev in current_wfs],
+                                          img_args = [5, False, True, True, None, None],
+                                          colormap='coolwarm'
+                                          )
+    fig.savefig(f'{display_plots_path}current_map.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_current_map.jpg', bbox_inches='tight')
+    plt.close()
+
+#runtime summary function
+def runtime_summary(process_times, config_dict):
+    fontsize=int(config_dict["fontsize"])
+    display_plots_path=config_dict["display_plots_path"]
+    fig, axs=plt.subplots(2,2)
+    axs[0,0].scatter(process_times[0][0], process_times[0][1], color="blue")
+    axs[0,0].set_title("Total Summary", fontsize=fontsize)
+    axs[0,1].scatter(process_times[1][0], process_times[1][1], color="red")
+    axs[0,1].set_title("Reader", fontsize=fontsize)
+    axs[1,0].scatter(process_times[2][0], process_times[2][1], color="orange")
+    axs[1,0].set_title("Sorting", fontsize=fontsize)
+    axs[1,1].scatter(process_times[3][0], process_times[3][1], color="green")
+    axs[1,1].set_title("Plotting", fontsize=fontsize)
+    for ax in axs.flat:
+        ax.set_xlabel("Number of Events", fontsize=fontsize)
+        ax.set_ylabel("Seconds (s)", fontsize=fontsize)
+        ax.xaxis.set_tick_params(labelsize=fontsize)
+        ax.yaxis.set_tick_params(labelsize=fontsize)
     
+    fig.suptitle("Runtime Summary", fontsize=fontsize)
+    fig.tight_layout()
+    fig.savefig(f'{display_plots_path}runtime_summary.jpg', bbox_inches='tight')
+    plt.show()
+    plt.close()
 #CONDENSED FUNCTION, to be deleted
 
 # def sr_summary(run_id, sr_number, metrics_location, r0_location, tcal_location, r1_location, ev_save_location, phys_save_location, test=False, resolution=1, modules=22):
@@ -1533,6 +1781,7 @@ if live==True:
 
 runs=[] #will hold run ids and starting times
 subruns=[] #will hold subrun ids and subrun starting times, will be cleared on each run
+process_times=[[[],[]],[[],[]],[[],[]],[[],[]]]
 sorted_run_data_format=[[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]]]
 sorted_run_data=sorted_run_data_format #4 lists of 8 empty lists, will be the sorted data object the plots use
 final_subrun=[int(config_dict["final_run"]), 15] #this is sort of a testing object, doesn't work super great across runs
@@ -1555,7 +1804,7 @@ while monitoring==True:
         print(f'no r0 file for {current_target} found') #loop that should prevent script from going to the next run too early
         ready=False
         set=False
-        while ready==False or set==False:
+        while ready==False and set==False:
             ready=os.path.exists(config_dict["r0_file_location"].format(current_target[0],current_target[1]))
             set=os.path.exists(config_dict["r0_file_location"].format(current_target[0]+1,0))
         if ready==True:
@@ -1582,6 +1831,8 @@ while monitoring==True:
     r1_file=config_dict["r1_file_location"].format(current_target[0],current_target[1])
 
     reader=get_reader(r0_file, tcal_file, r1_file) #get reader data
+    process_times[1][0].append(reader.fNEvents)
+    process_times[1][1].append(time.time()-time_n)# get time for reader to process
     time_s=time.time()
     sr_data=collect_stats(reader) #get useable stats from reader
     subruns.append([current_target[1], sr_data[5][0]])
@@ -1597,8 +1848,9 @@ while monitoring==True:
     print(f'\nEvents: {len(sorted_subrun_array[0][0])}, showers: {len(sorted_subrun_array[1][0])}, flashers: {len(sorted_subrun_array[2][0])}, other: {len(sorted_subrun_array[3][0])}')
 
     print(f'\nsorting the data took {time.time()-time_s} s')
-        #event rate histograms here
-
+    process_times[2][0].append(reader.fNEvents)
+    process_times[2][1].append(time.time()-time_s) #get time for sorting
+    #event rate histograms here
     time_h=time.time()
     event_rate_hists(current_target, sorted_run_array, sorted_subrun_array, config_dict)#event rate histograms for overall run and subrun
     print(f'\n event rate histograms took {time.time()-time_h} s\n')
@@ -1614,19 +1866,24 @@ while monitoring==True:
         sorting_hists_1d(current_target, sorted_run_array, sr_data, config_dict)
         print(f'\n 1d histograms took {time.time()-time_ho} s\n')
 
-    #physical metrics graph function
-    time_p=time.time()
-    environmental_summary(current_target, subruns, config_dict)
-    print(f'\n physical metrics took {time.time()-time_p} s\n')
+    #environmental metrics graph function
+    # time_p=time.time()
+    # new_environmental_summary(current_target, subruns, config_dict)
+    # print(f'\n environmental metrics took {time.time()-time_p} s\n')
     #'heat' maps/camera visualizations function here
 
     #time dt graphs
     if bool(int(config_dict["histograms_dt"]))==True:
         time_dt=time.time()
         delt_hists(current_target, sorted_run_array, sorted_subrun_array, config_dict)
-        print(f'\n time dt plots took {time.time()-time_p} s\n')
+        print(f'\n time dt plots took {time.time()-time_dt} s\n')
+
+    process_times[3][0].append(reader.fNEvents)
+    process_times[3][1].append(time.time()-time_h) #get time for plots
 
     print(f'\nsummary of run {current_target[0]} subrun {current_target[1]} took {time.time()-time_n}s\n')
+    process_times[0][0].append(reader.fNEvents)
+    process_times[0][1].append(time.time()-time_n)
 
     print(f'\nruns covered: {runs}\nsubruns covered: {subruns}')
 
@@ -1636,6 +1893,9 @@ while monitoring==True:
 
     current_target[1]+=1
     print('\nrestarting loop')
+
+if bool(int(config_dict["runtime_test"])):
+    runtime_summary(process_times, config_dict)
 
 
        

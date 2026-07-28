@@ -24,6 +24,8 @@ initial_run: run monitoring should start looking for at subrun 0. should theoret
 
 final_run: end point, not currently particularly useful here. should stop running the script before looking at this run/ when this run starts.
 
+runtime_test: 1=true/0=false, gets run time of different parts of the script and plots them to number of events to test script performance.
+
 histograms_1d: 1=true/0=false, will 1d histograms be generated
 
 histograms_2d: 1=true/0=false, will 2d histograms be generated
@@ -58,7 +60,7 @@ shower_intercept: shower cut is diagonal, simple -x + b. set intercept here, it 
 
 envelopes: 1=true/0=false, extra lines and an alert on the environmental metric plots for unwanted values. they have to be floats
 
-FEE_temp_high: value in C to be alerted if an FEE temperature passes above
+FEE_temp_high: value in C to be alerted if an FEE temperature passes above, these can be floats
 
 FEE_temp_low: value in C to be alerted if an FEE temperature passes below
 
