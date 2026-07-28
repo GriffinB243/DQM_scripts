@@ -150,12 +150,12 @@ def generate_temps_FEEs(run, subrun):
             )
 
     tempsAux = [blocksAux[0][key][0] for ind, key in enumerate(blocksAux[0].keys()) if ind != 0 and len(blocksAux[0][key]) > 0]
-    temps = [[tempsPri, tempsAux][l%2][l//2] for l in range(2*len(tempsPri))]
+    temps = np.array([[tempsPri, tempsAux][l%2][l//2] for l in range(2*len(tempsPri))])
 
     # temps = []
     try:
-        np.save(fee_temp_file.format(run, subrun), np.array(temps))
-        print(f'Shape of Fee temps: {np.array(temps).shape}')
+        np.save(fee_temp_file.format(run, subrun), temps)
+        print(f'Shape of FEE temps: {temps.shape}\n Temps: {temps}')
     except:
         pass
 
@@ -177,7 +177,7 @@ def generate_HV_current(run, subrun):
                 value_patterns=patternsHV,
             )
 
-    hv = [blocksHV[0][key][0] for ind, key in enumerate(blocksHV[0].keys()) if ind != 0 and len(blocksHV[0][key]) > 0]
+    hv = np.array([blocksHV[0][key][0] for ind, key in enumerate(blocksHV[0].keys()) if ind != 0 and len(blocksHV[0][key]) > 0])
 
     patternsCur = {"Pri_mod{}".format(mod): "* - DEBUG    - Module {0} HV *V, ".format(mod) for mod in mod_config['module_id']}
     blocksCur = extract_values(
@@ -186,14 +186,16 @@ def generate_HV_current(run, subrun):
                 value_patterns=patternsCur,
             )
 
-    current = [blocksCur[0][key][0] for ind, key in enumerate(blocksCur[0].keys()) if ind != 0 and len(blocksCur[0][key]) > 0]
+    current = np.array([blocksCur[0][key][0] for ind, key in enumerate(blocksCur[0].keys()) if ind != 0 and len(blocksCur[0][key]) > 0])
     try:
-        np.save(fpm_hv_file.format(run, subrun), np.array(hv))
+        np.save(fpm_hv_file.format(run, subrun), hv)
+        print(f'Shape of HV vals: {hv.shape}\n HV: {hv}')
     except:
         pass
     
     try:
-        np.save(fee_current_file.format(run, subrun), np.array(current))
+        np.save(fee_current_file.format(run, subrun), current)
+        print(f'Shape of Current vals: {current.shape}\n Current: {current}')
     except:
         pass
 
