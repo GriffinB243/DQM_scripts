@@ -1494,7 +1494,7 @@ def environmental_summary(current_sr, subruns, config_dict):
     plt.close()
 
 def new_environmental_summary(current_sr, subruns, config_dict):
-    modules=int(config_dict["modules"])
+    # modules=int(config_dict["modules"])
     time_step=float(config_dict["time_step"])
     display_plots_path=config_dict["display_plots_path"]
     plots_save_path=config_dict["plots_save_path"]
@@ -1527,11 +1527,13 @@ def new_environmental_summary(current_sr, subruns, config_dict):
       current_data=np.load(config_dict["current_file"].format(current_sr[0], sr))
       current_list.append(current_data)
 
+      modules=len(current_data)
+
     # fpmTemps=np.zeros((modules*4,4,len(fpmTemp_list[:])))
     fee_temps=np.zeros((modules*2,4,len(fee_temp_list[:])))
     hv=np.zeros((modules,4,len(hv_list[:])))
     current=np.zeros((modules,4,len(current_list[:])))
-
+    current_line=False
     for sr in range(current_sr[1]+1):
 
         # for quad in range(modules*4):
@@ -1568,13 +1570,14 @@ def new_environmental_summary(current_sr, subruns, config_dict):
                   print(f"\nSubrun {sr}: HV in module {mod} is below {hv_low} V at {hv_list[sr][mod]} V!")
 
            current[mod][0][sr]=sr
-           current[mod][1][sr]=current_list[sr][mod]
+           current[mod][1][sr]=current_list[sr][mod]/10E3
            current[mod][2][sr]=mod
            current[mod][3][sr]=subruns[sr][1]-subruns[0][1]
            if sr==current_sr[1]:
-               if current_list[sr][mod]>current_high:
+               if (current_list[sr][mod]/10E3)>current_high:
                   print(f"\nSubrun {sr}: Current in module {mod} is above {current_high} A at {current_list[sr][mod]} A!")
-               if current_list[sr][mod]<current_low:
+                  current_line=True
+               if (current_list[sr][mod]/10E3)<current_low:
                   print(f"\nSubrun {sr}: Current in module {mod} is below {current_low} A at {current_list[sr][mod]} A!")
 
     # fpm_wfs=np.zeros((1,current_sr[1]+1,25,64))
@@ -1642,7 +1645,8 @@ def new_environmental_summary(current_sr, subruns, config_dict):
     fig, ax,=plt.subplots()
     for mod in range(modules):
        ax.plot(current[mod][3]/(time_step),current[mod][1])
-    ax.hlines(current_high, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='red')
+    if current_line==True:
+        ax.hlines(current_high, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='red')
     ax.hlines(current_low, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='blue')
     ax.set_ylabel("Current (A)", fontsize=fontsize)
     ax.set_xlabel("Time (min)", fontsize=fontsize)
@@ -1695,7 +1699,7 @@ def new_environmental_summary(current_sr, subruns, config_dict):
                                       font = 14, # Font for all labels. If not provided, fetches from config file
                                       wfs = [ev for ev in hv_wfs],
                                       img_args = [5, False, True, True, None, None],
-                                      colormap='coolwarm'
+                                      colormap='RdYlBu_r'
                                       )
     fig.savefig(f'{display_plots_path}HV_map.jpg', bbox_inches='tight')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_HV_map.jpg', bbox_inches='tight')
@@ -1711,7 +1715,7 @@ def new_environmental_summary(current_sr, subruns, config_dict):
                                           font = 14, # Font for all labels. If not provided, fetches from config file
                                           wfs = [ev for ev in current_wfs],
                                           img_args = [5, False, True, True, None, None],
-                                          colormap='coolwarm'
+                                          colormap='Reds'
                                           )
     fig.savefig(f'{display_plots_path}current_map.jpg', bbox_inches='tight')
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_current_map.jpg', bbox_inches='tight')
@@ -1867,9 +1871,9 @@ while monitoring==True:
         print(f'\n 1d histograms took {time.time()-time_ho} s\n')
 
     #environmental metrics graph function
-    # time_p=time.time()
-    # new_environmental_summary(current_target, subruns, config_dict)
-    # print(f'\n environmental metrics took {time.time()-time_p} s\n')
+    time_p=time.time()
+    new_environmental_summary(current_target, subruns, config_dict)
+    print(f'\n environmental metrics took {time.time()-time_p} s\n')
     #'heat' maps/camera visualizations function here
 
     #time dt graphs
