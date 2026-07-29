@@ -8,7 +8,7 @@ FPM_temp_file: /data/user/fbivens5020/mock_data/temperatures_FPMs_run{0}_subrun{
 monitoring: 1
 live: 0
 initial_run: 400215
-final_run: 400215
+final_run: 400216
 runtime_test: 1
 histograms_1d: 1
 histograms_2d: 1
@@ -31,7 +31,7 @@ FEE_temp_high: 40
 FEE_temp_low: 30
 FPM_temp_high: 35
 FPM_temp_low: 20
-current_high: 0.03
+current_high: 30
 current_low: 0
 hv_high: 70.5
 hv_low: 69.5

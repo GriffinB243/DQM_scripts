@@ -11,7 +11,7 @@ from psct_event_visualizer import display_event, get_reader_object, get_event_fr
 
 plt.rcParams['figure.dpi'] = 300
 
-#config file loader
+#config file loader. in use
 def load_config(filepath):
     result = {}
     with open(filepath, 'r') as f:
@@ -22,7 +22,7 @@ def load_config(filepath):
                 result[key.strip()] = value.strip()
     return result
 
-#get the reader object with your r0_file_path, chosen pedestal path, and r1_file_path if one exists
+#get the reader object with your r0_file_path, chosen pedestal path, and where you want the r1 file to go. in use
 def get_reader(r0_path, tcal_path, r1_path): #being actively used
 
     tcal_ped_path = tcal_path
@@ -113,6 +113,11 @@ def collect_stats(reader): #being actively used
 
     return all_wfs, stats_all[0], stats_all[1], stats_all[2], stats_all[3], timess
 
+#end of stat sequence
+
+#below is options that are now in the config file. at some point i am going to delete old and out of use stuff that's been commented
+#and then itll look a whole lot nicer around here.
+
 # #all options and changes listed here:
 # r0_file_location='/data/user/fbivens5020/mock_data/'#'folder where all the r0 files are'
 # pedestal_path='/data/wipac/CTA/targetcdata/run400032_pedestal.tcal'#'the chosen pedestal'
@@ -148,7 +153,8 @@ def collect_stats(reader): #being actively used
 #returns the sr_data object which is sr[0]: all wfs, sr[1]: mean time, sr[1][ev]: mean time for an event, sr[2]: time std
 #sr[3]: charge mean, sr[4]: charge std, sr[5]: event time
 
-# def get_cuts(): #being actively used though i really want to change how this one works
+#old cuts function, out of use and to be deleted
+# def get_cuts(): 
 #     charge_mean_shower_max=2000
 #     charge_mean_shower_min=40
 
@@ -169,6 +175,7 @@ def collect_stats(reader): #being actively used
     
 #     return charge_mean_shower_min, charge_mean_shower_max, charge_std_shower_min, charge_std_shower_max, charge_mean_flasher_min, charge_mean_flasher_max, charge_std_flasher_min, charge_std_flasher_max, time_std_shower_min, time_std_shower_max, time_std_flasher_min, time_std_flasher_max
 
+#yet another cuts function set to be deleted
 # def newest_cuts():
 #     charge_mean_shower_min=40
 #     charge_mean_flasher_min=2500
@@ -179,8 +186,8 @@ def collect_stats(reader): #being actively used
 
 #     return charge_mean_shower_min, charge_mean_flasher_min, charge_std_shower_min, charge_std_flasher_max, time_std_shower_max, time_std_flasher_max
 # #establishes ranges for sorting boxes, make sure to have cuts=get_cuts
-#sorting function, to be phased out but still works
-# def sort_data(sr_data, cuts, list=False): #Out
+#older data sorting function, to be deleted
+# def sort_data(sr_data, cuts, list=False):
 #     ch_showers=[]
 #     t_showers=[]
 #     ch_flashers=[]
@@ -277,7 +284,8 @@ def collect_stats(reader): #being actively used
     
 # #sorts the data into 9 lists, should be used to create the sorted_data object which has 9 sections with 2 indexes each
 
-#new awesome sorting function in use, is only broken in a couple of ways
+#newer but old sorting function, to be deleted
+
 # def real_new_sort(sr_data, subrun, sorted_run_data, cuts, subruns):
 #    confirmations=[[],[],[],[],0]
 #    sorted_subrun=[[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]]]
@@ -525,12 +533,12 @@ def collect_stats(reader): #being actively used
 def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
     sorted_subrun=[[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]]]
 
-    flasher_min=int(config_dict["charge_mean_flasher_min"])
+    flasher_min=int(config_dict["charge_mean_flasher_min"]) #grabs the flasher min and shower intercept from config file
     shower_intercept=int(config_dict["shower_intercept"])
     for event in trange(len(sr_data[0]), desc='Sorting Events'):
         #all events data
             
-        sorted_run_data[0][0].append(sr_data[5][event]-subruns[0][1]) #set actual time
+        sorted_run_data[0][0].append(sr_data[5][event]-subruns[0][1]) #set time from start of run not accounting for deadtime
         sorted_run_data[0][1].append(sr_data[3][event]) #mean charge
         sorted_run_data[0][2].append(sr_data[4][event]) #charge std
         sorted_run_data[0][3].append(sr_data[1][event]) #mean time
@@ -538,7 +546,7 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
         sorted_run_data[0][5].append(event)#event id inside subrun
         sorted_run_data[0][6].append(subrun)# subrun id to make event id usable
         #again but for the subrun only
-        sorted_subrun[0][0].append(sr_data[5][event]-sr_data[5][0]) #set starting subrun time to 0
+        sorted_subrun[0][0].append(sr_data[5][event]-sr_data[5][0]) #set subrun time from start of subrun
         sorted_subrun[0][1].append(sr_data[3][event]) #mean charge
         sorted_subrun[0][2].append(sr_data[4][event]) #charge std
         sorted_subrun[0][3].append(sr_data[1][event]) #mean time
@@ -555,7 +563,7 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
         #flashers now
         if sr_data[3][event]>flasher_min:
 
-            sorted_run_data[2][0].append(sr_data[5][event]-subruns[0][1]) #set actual time
+            sorted_run_data[2][0].append(sr_data[5][event]-subruns[0][1]) #set time from start of run
             sorted_run_data[2][1].append(sr_data[3][event]) #mean charge
             sorted_run_data[2][2].append(sr_data[4][event]) #charge std
             sorted_run_data[2][3].append(sr_data[1][event]) #mean time
@@ -563,7 +571,7 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
             sorted_run_data[2][5].append(event)#event id inside subrun
             sorted_run_data[2][6].append(subrun)# subrun id to make event id usable
             #again but for the subrun only
-            sorted_subrun[2][0].append(sr_data[5][event]-sr_data[5][0]) #set starting subrun time to 0
+            sorted_subrun[2][0].append(sr_data[5][event]-sr_data[5][0]) #set time from start of subrun
             sorted_subrun[2][1].append(sr_data[3][event]) #mean charge
             sorted_subrun[2][2].append(sr_data[4][event]) #charge std
             sorted_subrun[2][3].append(sr_data[1][event]) #mean time
@@ -580,7 +588,7 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
 
             #if not flasher check shower
         elif sr_data[4][event]>(-sr_data[3][event]+shower_intercept):
-            sorted_run_data[1][0].append(sr_data[5][event]-subruns[0][1]) #set actual time
+            sorted_run_data[1][0].append(sr_data[5][event]-subruns[0][1]) #set time from start of run
             sorted_run_data[1][1].append(sr_data[3][event]) #mean charge
             sorted_run_data[1][2].append(sr_data[4][event]) #charge std
             sorted_run_data[1][3].append(sr_data[1][event]) #mean time
@@ -588,7 +596,7 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
             sorted_run_data[1][5].append(event)#event id inside subrun
             sorted_run_data[1][6].append(subrun)# subrun id to make event id usable
             #again but for the subrun only
-            sorted_subrun[1][0].append(sr_data[5][event]-sr_data[5][0]) #set starting subrun time to 0
+            sorted_subrun[1][0].append(sr_data[5][event]-sr_data[5][0]) #set time from start of subrun
             sorted_subrun[1][1].append(sr_data[3][event]) #mean charge
             sorted_subrun[1][2].append(sr_data[4][event]) #charge std
             sorted_subrun[1][3].append(sr_data[1][event]) #mean time
@@ -605,7 +613,7 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
 
             #if not flasher or shower background
         else:
-            sorted_run_data[3][0].append(sr_data[5][event]-subruns[0][1]) #set actual time
+            sorted_run_data[3][0].append(sr_data[5][event]-subruns[0][1]) #set time from start of run
             sorted_run_data[3][1].append(sr_data[3][event]) #mean charge
             sorted_run_data[3][2].append(sr_data[4][event]) #charge std
             sorted_run_data[3][3].append(sr_data[1][event]) #mean time
@@ -613,7 +621,7 @@ def another_new_sort(sr_data, subrun, sorted_run_data, config_dict, subruns):
             sorted_run_data[3][5].append(event)#event id inside subrun
             sorted_run_data[3][6].append(subrun)# subrun id to make event id usable
             #again but for the subrun only
-            sorted_subrun[3][0].append(sr_data[5][event]-sr_data[5][0]) #set starting subrun time to 0
+            sorted_subrun[3][0].append(sr_data[5][event]-sr_data[5][0]) #set time from start of subrun
             sorted_subrun[3][1].append(sr_data[3][event]) #mean charge
             sorted_subrun[3][2].append(sr_data[4][event]) #charge std
             sorted_subrun[3][3].append(sr_data[1][event]) #mean time
@@ -872,8 +880,8 @@ def sorting_hists_2d(current_sr, sorted_run_data, sr_data, config_dict):
         ax.legend(loc='lower right',fontsize=fontsize)
 
       ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-      ax.set_xlabel("Log Charge Mean (ADC*ns)", fontsize=fontsize)
-      ax.set_ylabel("Log Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
+      ax.set_xlabel("Log10 Charge Mean (ADC*ns)", fontsize=fontsize)
+      ax.set_ylabel("Log10 Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
       plt.xticks(fontsize=fontsize)
       plt.yticks(fontsize=fontsize)
       fig.savefig(f'{display_plots_path}charge_std_charge_mean_log_histogram.jpg', bbox_inches='tight')
@@ -890,8 +898,8 @@ def sorting_hists_2d(current_sr, sorted_run_data, sr_data, config_dict):
           ax.legend(loc='upper right',fontsize=fontsize)
 
       ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-      ax.set_xlabel("Log Charge Mean (ADC*ns)", fontsize=fontsize)
-      ax.set_ylabel("Log Peak Time Standard Deviation (ADC*ns)", fontsize=fontsize)
+      ax.set_xlabel("Log10 Charge Mean (ADC*ns)", fontsize=fontsize)
+      ax.set_ylabel("Log10 Peak Time Standard Deviation (ADC*ns)", fontsize=fontsize)
       plt.xticks(fontsize=fontsize)
       plt.yticks(fontsize=fontsize)
       fig.savefig(f'{display_plots_path}time_std_charge_mean_log_histogram.jpg', bbox_inches='tight')
@@ -1026,8 +1034,8 @@ def sorting_hists_2d(current_sr, sorted_run_data, sr_data, config_dict):
             ax.legend(loc='lower right',fontsize=fontsize)
     
         ax.set_title(f"Run {current_sr[0]}, Subrun {current_sr[1]} (All Events)", fontsize=fontsize)
-        ax.set_xlabel("Log Charge Mean (ADC*ns)", fontsize=fontsize)
-        ax.set_ylabel("Log Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
+        ax.set_xlabel("Log10 Charge Mean (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Log10 Charge Standard Deviation (ADC*ns)", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_charge_std_charge_mean_log_histogram.jpg', bbox_inches='tight')
@@ -1043,8 +1051,8 @@ def sorting_hists_2d(current_sr, sorted_run_data, sr_data, config_dict):
             ax.legend(loc='upper right',fontsize=fontsize)
     
         ax.set_title(f"Run {current_sr[0]}, Subruns 0-{current_sr[1]} (All Events)", fontsize=fontsize)
-        ax.set_xlabel("Log Charge Mean (ADC*ns)", fontsize=fontsize)
-        ax.set_ylabel("Log Peak Time Standard Deviation (ADC*ns)", fontsize=fontsize)
+        ax.set_xlabel("Log10 Charge Mean (ADC*ns)", fontsize=fontsize)
+        ax.set_ylabel("Log10 Peak Time Standard Deviation (ADC*ns)", fontsize=fontsize)
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_charge_mean_log_histogram.jpg', bbox_inches='tight')
@@ -1340,7 +1348,7 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
             fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_std_shower_region_histogram.jpg', bbox_inches='tight')
             plt.close()
 
-# #older event rate function, likely to be deleted
+# #older event rate function, to be deleted
 # def event_rate(sorted_data, sr_data, run_id, sr_number, save_location, mod=1, test=False):
 #     modifier=mod
 #     # fig=plt.figure()
@@ -1388,7 +1396,7 @@ def sorting_hists_1d(current_sr, sorted_run_data, sr_data, config_dict):
 
     #Produces the whole nice graph thing
 
-#OTHER METRICS FUNCTION in use
+#old environmental summary, out of use
 
 def environmental_summary(current_sr, subruns, config_dict):
     modules=int(config_dict["modules"])
@@ -1493,6 +1501,7 @@ def environmental_summary(current_sr, subruns, config_dict):
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_current_plot.jpg', bbox_inches='tight')
     plt.close()
 
+#new environmental summary, in use
 def new_environmental_summary(current_sr, subruns, config_dict):
     # modules=int(config_dict["modules"])
     time_step=float(config_dict["time_step"])
@@ -1570,14 +1579,14 @@ def new_environmental_summary(current_sr, subruns, config_dict):
                   print(f"\nSubrun {sr}: HV in module {mod} is below {hv_low} V at {hv_list[sr][mod]} V!")
 
            current[mod][0][sr]=sr
-           current[mod][1][sr]=current_list[sr][mod]/10E3
+           current[mod][1][sr]=current_list[sr][mod]
            current[mod][2][sr]=mod
            current[mod][3][sr]=subruns[sr][1]-subruns[0][1]
            if sr==current_sr[1]:
-               if (current_list[sr][mod]/10E3)>current_high:
+               if (current_list[sr][mod])>current_high:
                   print(f"\nSubrun {sr}: Current in module {mod} is above {current_high} A at {current_list[sr][mod]} A!")
                   current_line=True
-               if (current_list[sr][mod]/10E3)<current_low:
+               if (current_list[sr][mod])<current_low:
                   print(f"\nSubrun {sr}: Current in module {mod} is below {current_low} A at {current_list[sr][mod]} A!")
 
     # fpm_wfs=np.zeros((1,current_sr[1]+1,25,64))
@@ -1648,7 +1657,7 @@ def new_environmental_summary(current_sr, subruns, config_dict):
     if current_line==True:
         ax.hlines(current_high, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='red')
     ax.hlines(current_low, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='blue')
-    ax.set_ylabel("Current (A)", fontsize=fontsize)
+    ax.set_ylabel("SiPm Currents (mA)", fontsize=fontsize)
     ax.set_xlabel("Time (min)", fontsize=fontsize)
     ax.set_title('Environmental Metrics', fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
@@ -1680,7 +1689,7 @@ def new_environmental_summary(current_sr, subruns, config_dict):
                                   projected=True,
                                   title=f"Run {current_sr[0]} Subrun {current_sr[1]}\nFEE Temperatures", # Title. if nto provided, it leaves it in blank
                                   colorbar_legend="Temperature (C)",
-                                  font = 14, # Font for all labels. If not provided, fetches from config file
+                                  font = fontsize, # Font for all labels. If not provided, fetches from config file
                                   wfs = [ev for ev in fee_wfs],
                                   img_args = [5, False, True, True, None, None],
                                   colormap='coolwarm'
@@ -1696,7 +1705,7 @@ def new_environmental_summary(current_sr, subruns, config_dict):
                                       projected=True,
                                       title=f"Run {current_sr[0]} Subrun {current_sr[1]}\nHV Values", # Title. if nto provided, it leaves it in blank
                                       colorbar_legend="HV (V)",
-                                      font = 14, # Font for all labels. If not provided, fetches from config file
+                                      font = fontsize, # Font for all labels. If not provided, fetches from config file
                                       wfs = [ev for ev in hv_wfs],
                                       img_args = [5, False, True, True, None, None],
                                       colormap='RdYlBu_r'
@@ -1710,9 +1719,9 @@ def new_environmental_summary(current_sr, subruns, config_dict):
                                           im_type='img',
                                           frame=current_sr[1],
                                           projected=True,
-                                          title=f"Run {current_sr[0]} Subrun {current_sr[1]}\nCurrent Values", # Title. if nto provided, it leaves it in blank
-                                          colorbar_legend="Current (A)",
-                                          font = 14, # Font for all labels. If not provided, fetches from config file
+                                          title=f"Run {current_sr[0]} Subrun {current_sr[1]}\nSiPM Currents", # Title. if nto provided, it leaves it in blank
+                                          colorbar_legend="Current (mA)",
+                                          font = fontsize, # Font for all labels. If not provided, fetches from config file
                                           wfs = [ev for ev in current_wfs],
                                           img_args = [5, False, True, True, None, None],
                                           colormap='Reds'
@@ -1721,7 +1730,47 @@ def new_environmental_summary(current_sr, subruns, config_dict):
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_current_map.jpg', bbox_inches='tight')
     plt.close()
 
-#runtime summary function
+    fig, axs, wfs = display_event(None, 
+                              event = 0, # If not provided, plots event 0
+                              im_type='ani',
+                              projected=True,
+                              title=f"Run {current_sr[0]} Subruns 0-{current_sr[1]}\nFEE Temperatures", # Title. if nto provided, it leaves it in blank
+                              colorbar_legend="Temperature (C)",
+                              font = fontsize, # Font for all labels. If not provided, fetches from config file
+                              wfs = [ev for ev in fee_wfs],
+                              save=f"{plots_save_path}run_{current_sr[0]}_fee_temp.gif",
+                              colormap='coolwarm'
+                              )
+    plt.close()
+
+    fig, axs, wfs = display_event(None, 
+                                  event = 0, # If not provided, plots event 0
+                                  im_type='ani',
+                                  projected=True,
+                                  title=f"Run {current_sr[0]} Subruns 0-{current_sr[1]}\nHV Values", # Title. if nto provided, it leaves it in blank
+                                  colorbar_legend="HV (V)",
+                                  font = fontsize, # Font for all labels. If not provided, fetches from config file
+                                  wfs = [ev for ev in hv_wfs],
+                                  save=f"{plots_save_path}run_{current_sr[0]}_hv_value.gif",
+                                  colormap='RdYlBu_r'
+                                  )
+    plt.close()
+
+    fig, axs, wfs = display_event(None, 
+                                      event = 0, # If not provided, plots event 0
+                                      im_type='ani',
+                                      projected=True,
+                                      title=f"Run {current_sr[0]} Subruns 0-{current_sr[1]}\nSiPM Currents", # Title. if nto provided, it leaves it in blank
+                                      colorbar_legend="Current (mA)",
+                                      font = fontsize, # Font for all labels. If not provided, fetches from config file
+                                      wfs = [ev for ev in current_wfs],
+                                      save=f"{plots_save_path}run_{current_sr[0]}_sipm_current.gif",
+                                      colormap='Reds'
+                                      )
+    plt.close()
+
+
+#runtime summary function, in use
 def runtime_summary(process_times, config_dict):
     fontsize=int(config_dict["fontsize"])
     display_plots_path=config_dict["display_plots_path"]
@@ -1745,6 +1794,7 @@ def runtime_summary(process_times, config_dict):
     fig.savefig(f'{display_plots_path}runtime_summary.jpg', bbox_inches='tight')
     plt.show()
     plt.close()
+
 #CONDENSED FUNCTION, to be deleted
 
 # def sr_summary(run_id, sr_number, metrics_location, r0_location, tcal_location, r1_location, ev_save_location, phys_save_location, test=False, resolution=1, modules=22):
@@ -1776,30 +1826,32 @@ def runtime_summary(process_times, config_dict):
 #          subrun=subrun_base
 #    return run, subrun
 
-config_dict = load_config("/data/user/fbivens5020/DQM_scripts/DQM_config.txt")
-monitoring=bool(config_dict["monitoring"])
+config_dict = load_config("/data/user/fbivens5020/DQM_scripts/DQM_config.txt") #load config file
+monitoring=bool(config_dict["monitoring"]) #will monitoring loop run
 live=bool(int(config_dict["live"]))
 current_target=[int(config_dict["initial_run"]),0] #if not live the inital run is taken as the starting point
 if live==True:
     current_target=[(int(config_dict["initial_run"])+1),0] #if live we're looking for the next run assuming inital run is completed
 
-runs=[] #will hold run ids and starting times
-subruns=[] #will hold subrun ids and subrun starting times, will be cleared on each run
+runs=[] #will hold run ids and starting times of runs
+subruns=[] #will hold subrun ids and subrun starting times, will then be overwritten each new run
 process_times=[[[],[]],[[],[]],[[],[]],[[],[]]]
 sorted_run_data_format=[[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]],[[],[],[],[],[],[],[],[]]]
 sorted_run_data=sorted_run_data_format #4 lists of 8 empty lists, will be the sorted data object the plots use
-final_subrun=[int(config_dict["final_run"]), 15] #this is sort of a testing object, doesn't work super great across runs
+final_subrun=[int(config_dict["final_run"]), 0] #monitoring will stop after processing this run not before, which does need to be fixed
+#should be set to [final run, 0] once fixed unless you're testing
 while monitoring==True:
-    config_dict = load_config("/data/user/fbivens5020/DQM_scripts/DQM_config.txt")
+    config_dict = load_config("/data/user/fbivens5020/DQM_scripts/DQM_config.txt") #config dictionary is reloaded so you can change options as the script runs
+    #though you should stick to fontsizes and small things. if you change anything about sorting, it won't resort subruns its already sorted
     print(f'\nlooking at run {current_target[0]}, sub-run {current_target[1]}')
     #loop that should check and wait for the right file for as long as it needs to
     #works across one run, hasn't been tested for switching to a new run
-    if os.path.exists(config_dict["r0_file_location"].format(current_target[0],current_target[1])):
+    if os.path.exists(config_dict["r0_file_location"].format(current_target[0],current_target[1])): #checks if r0 file exists at all
         print(f'\nr0 file for {current_target} found')
-        if os.path.exists(config_dict["current_file"].format(current_target[0],current_target[1])):
+        if os.path.exists(config_dict["current_file"].format(current_target[0],current_target[1])): #checks for a current file
             print('\nand it is ready for analysis')
         else:
-            print('\nbut it is not ready for analysis')
+            print('\nbut it is not ready for analysis')#doesn't touch anything until environmental metrics are saved to avoid touching the r0 files while its being written to
             ready=False
             while ready==False:
                 ready=os.path.exists(config_dict["current_file"].format(current_target[0],current_target[1]))
@@ -1815,39 +1867,39 @@ while monitoring==True:
             print('\nfile has been found')
             continue
         elif set==True:
-            print('\nnew run has been found')
-            current_target=[current_target[0]+1, 0]
+            print('\nnew run has been found') #theoretically this should be able to handle the scenario where the last subrun of a run and the first of the next both exist and finish the run first
+            current_target=[current_target[0]+1, 0] #but it has not been tested so check bugs here first when processing multiple runs.
             continue
     
     if current_target[1]==0:
         subruns=[]
-        sorted_run_data=sorted_run_data_format
+        sorted_run_data=sorted_run_data_format #this should reset the data objects that are cummulative across runs but has not been tested
         runs.append(current_target[0])
     
     # subruns.append(current_target[1])
 
-    print(f'\ndoing all the things and such for run {current_target[0]} subrun {current_target[1]}')
+    print(f'\ndoing all the things and such for run {current_target[0]} subrun {current_target[1]}') #check from loop testing
     
-    time_n=time.time()
+    time_n=time.time() #first time checkpoint for the processing proper
 
-    r0_file=config_dict["r0_file_location"].format(current_target[0],current_target[1])
-    tcal_file=config_dict["pedestal_path"]
-    r1_file=config_dict["r1_file_location"].format(current_target[0],current_target[1])
+    r0_file=config_dict["r0_file_location"].format(current_target[0],current_target[1])# find r0 file
+    tcal_file=config_dict["pedestal_path"] #pedestal
+    r1_file=config_dict["r1_file_location"].format(current_target[0],current_target[1])#save location for r1 file
 
     reader=get_reader(r0_file, tcal_file, r1_file) #get reader data
-    process_times[1][0].append(reader.fNEvents)
+    process_times[1][0].append(reader.fNEvents) #time checkpoint
     process_times[1][1].append(time.time()-time_n)# get time for reader to process
-    time_s=time.time()
+    time_s=time.time() #sorting time checkpoint
     sr_data=collect_stats(reader) #get useable stats from reader
-    subruns.append([current_target[1], sr_data[5][0]])
+    subruns.append([current_target[1], sr_data[5][0]]) #subrun starting time important for stuff
     sorted_subrun=another_new_sort(sr_data, current_target[1], sorted_run_data, config_dict, subruns) #new sorting function it should spit out a nice big list with all relevant data
 
     sorted_run_array=[]
     for type in range(4):
-        sorted_run_array.append(np.array(sorted_run_data[type]))
+        sorted_run_array.append(np.array(sorted_run_data[type])) #these two arrays should have the same shape
     sorted_subrun_array=[]
     for type in range(4):
-        sorted_subrun_array.append(np.array(sorted_subrun[type]))
+        sorted_subrun_array.append(np.array(sorted_subrun[type])) #[event type(0-3)][metric(0-7)][event]
 
     print(f'\nEvents: {len(sorted_subrun_array[0][0])}, showers: {len(sorted_subrun_array[1][0])}, flashers: {len(sorted_subrun_array[2][0])}, other: {len(sorted_subrun_array[3][0])}')
 
@@ -1855,7 +1907,7 @@ while monitoring==True:
     process_times[2][0].append(reader.fNEvents)
     process_times[2][1].append(time.time()-time_s) #get time for sorting
     #event rate histograms here
-    time_h=time.time()
+    time_h=time.time() #time checkpoint for plotting
     event_rate_hists(current_target, sorted_run_array, sorted_subrun_array, config_dict)#event rate histograms for overall run and subrun
     print(f'\n event rate histograms took {time.time()-time_h} s\n')
     #2d histogram function here
@@ -1887,19 +1939,19 @@ while monitoring==True:
 
     print(f'\nsummary of run {current_target[0]} subrun {current_target[1]} took {time.time()-time_n}s\n')
     process_times[0][0].append(reader.fNEvents)
-    process_times[0][1].append(time.time()-time_n)
+    process_times[0][1].append(time.time()-time_n) #final checkpoint for total summary
 
     print(f'\nruns covered: {runs}\nsubruns covered: {subruns}')
 
     if current_target==final_subrun:
-        print('\nfinal subrun reached, ending monitoring')
+        print('\nfinal subrun reached, ending monitoring') #should break now if final subrun is reached, will be changed later
         break
 
     current_target[1]+=1
-    print('\nrestarting loop')
+    print('\nrestarting loop') #sets target to the next subrun in the run because checking for the first subrun of the next run should happen at the beginning of the loop
 
 if bool(int(config_dict["runtime_test"])):
-    runtime_summary(process_times, config_dict)
+    runtime_summary(process_times, config_dict) #plots summary of seconds to process against number of events for different parts of the script
 
 
        
