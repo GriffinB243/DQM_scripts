@@ -1,3 +1,5 @@
+General info: DQM_script and DQM_config are the most important, to learn more about DQM script jump to the bottom and read that loop
+
 read alongside DQM_config for explanation of options
 
 r0_file_location: full path of r0 files
@@ -24,7 +26,7 @@ initial_run: run monitoring should start looking for at subrun 0. should theoret
 
 final_run: end point, not currently particularly useful here. should stop running the script before looking at this run/ when this run starts.
 
-runtime_test: 1=true/0=false, gets run time of different parts of the script and plots them to number of events to test script performance.
+runtime_test: 1=true/0=false, gets run time of different parts of the script and plots them to number of events to test script performance. Note this will only happen if the script reaches its final subrun, not if you stop it manually.
 
 histograms_1d: 1=true/0=false, will 1d histograms be generated
 

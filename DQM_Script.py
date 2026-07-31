@@ -762,6 +762,19 @@ def delt_hists(current_sr, sorted_run_data, sorted_subrun, config_dict):
     fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_flasher_histogram.jpg', bbox_inches='tight')
     plt.close()
 
+    fig=plt.figure()
+    ax=fig.add_subplot(111)
+    ax.hist(sorted_run_data[3][7], bins = bins, log=True)
+    ax.set_title(f"dt, Run {current_sr[0]}, Subruns 0-{current_sr[1]} (Other)", fontsize=fontsize)
+    ax.set_xlabel("dt (ns)", fontsize=fontsize)
+    ax.set_ylabel("Number of Events", fontsize=fontsize)
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
+    fig.savefig(f'{display_plots_path}time_dt_other_histogram.jpg', bbox_inches='tight')
+    fig.savefig(f'{plots_save_path}run_{current_sr[0]}_time_dt_other_histogram.jpg', bbox_inches='tight')
+    plt.close()
+    
+
     if subrun_plots==True:
         fig=plt.figure()
         ax=fig.add_subplot(111)
@@ -805,6 +818,17 @@ def delt_hists(current_sr, sorted_run_data, sorted_subrun, config_dict):
         plt.xticks(fontsize=fontsize)
         plt.yticks(fontsize=fontsize)
         fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_flasher_histogram.jpg', bbox_inches='tight')
+        plt.close()
+
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+        ax.hist(sorted_subrun[3][7], bins = bins, log=True)
+        ax.set_title(f"dt, Run {current_sr[0]}, Subrun {current_sr[1]} (Other)", fontsize=fontsize)
+        ax.set_xlabel("dt (ns)", fontsize=fontsize)
+        ax.set_ylabel("Number of Events", fontsize=fontsize)
+        plt.xticks(fontsize=fontsize)
+        plt.yticks(fontsize=fontsize)
+        fig.savefig(f'{plots_save_path}run_{current_sr[0]}_subrun_{current_sr[1]}_time_dt_other_histogram.jpg', bbox_inches='tight')
         plt.close()
 
 #2d histograms, being actively used
@@ -1630,7 +1654,7 @@ def new_environmental_summary(current_sr, subruns, config_dict):
     ax.hlines(FEE_temp_low, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='blue')
     ax.set_ylabel("FEE Temperature (C)", fontsize=fontsize)
     ax.set_xlabel("Time (min)", fontsize=fontsize)
-    ax.set_title('Environmental Metrics', fontsize=fontsize)
+    ax.set_title(f'Run {current_sr[0]} Subruns 0-{current_sr[1]}', fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
     fig.savefig(f'{display_plots_path}FEE_temps_plot.jpg', bbox_inches='tight')
@@ -1642,9 +1666,9 @@ def new_environmental_summary(current_sr, subruns, config_dict):
        ax.plot(hv[mod][3]/(time_step),hv[mod][1])
     ax.hlines(hv_high, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='red')
     ax.hlines(hv_low, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='blue')
-    ax.set_ylabel("HV (V)", fontsize=fontsize)
+    ax.set_ylabel("High Voltage (V)", fontsize=fontsize)
     ax.set_xlabel("Time (min)", fontsize=fontsize)
-    ax.set_title('Environmental Metrics', fontsize=fontsize)
+    ax.set_title(f'Run {current_sr[0]} Subruns 0-{current_sr[1]}', fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
     fig.savefig(f'{display_plots_path}HV_plot.jpg', bbox_inches='tight')
@@ -1659,7 +1683,7 @@ def new_environmental_summary(current_sr, subruns, config_dict):
     ax.hlines(current_low, 0, fee_temps[0][3][-1]/(time_step), linestyles='dashed', colors='blue')
     ax.set_ylabel("SiPm Currents (mA)", fontsize=fontsize)
     ax.set_xlabel("Time (min)", fontsize=fontsize)
-    ax.set_title('Environmental Metrics', fontsize=fontsize)
+    ax.set_title(f'Run {current_sr[0]} Subruns 0-{current_sr[1]}', fontsize=fontsize)
     plt.xticks(fontsize=fontsize)
     plt.yticks(fontsize=fontsize)
     fig.savefig(f'{display_plots_path}current_plot.jpg', bbox_inches='tight')
@@ -1704,7 +1728,7 @@ def new_environmental_summary(current_sr, subruns, config_dict):
                                       frame=current_sr[1],
                                       projected=True,
                                       title=f"Run {current_sr[0]} Subrun {current_sr[1]}\nHV Values", # Title. if nto provided, it leaves it in blank
-                                      colorbar_legend="HV (V)",
+                                      colorbar_legend="High Voltage (V)",
                                       font = fontsize, # Font for all labels. If not provided, fetches from config file
                                       wfs = [ev for ev in hv_wfs],
                                       img_args = [5, False, True, True, None, None],
@@ -1924,7 +1948,7 @@ while monitoring==True:
 
     #environmental metrics graph function
     time_p=time.time()
-    new_environmental_summary(current_target, subruns, config_dict)
+    new_environmental_summary(current_target, subruns, config_dict) #the gifs will have the frames labeled as nn which is wrong
     print(f'\n environmental metrics took {time.time()-time_p} s\n')
     #'heat' maps/camera visualizations function here
 
